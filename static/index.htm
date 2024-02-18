@@ -5,12 +5,13 @@
 
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
 
-  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://d3js.org/topojson.v2.min.js"></script>
   <style>
-    .tractsIncome {
+    .countries {
       stroke: white;
-      stroke-width: 2px;
+      stroke-width: 1px;
+      fill: #bbb;
     }
 
     .tractsTreeCount {
@@ -50,8 +51,16 @@
   <div style="margin-top:30px">
     <h2 style="text-align: center"> Exploring Power Plants Around the World</h2>
     <div class="row 1">
-      <svg id="mapGlobal"></svg>
+      <svg id="mapGlobal" width="1500" height="1000"></svg>
+      <div>
+        <svg width="300" height="200">
+          <text id="plantName" y="10" alignment-baseline="hanging"></text>
+          <text id="plantCapacity" y="25" alignment-baseline="hanging"></text>
+        </svg>
+
+      </div>
     </div>
+    <svg id="map" width="1500" height="1000"></svg>
 
 
   </div>
@@ -62,295 +71,119 @@
   <script>
 
     //row 1 elements
-    const svgIncome = d3.select("#mapGlobal");
-    const width = svgIncome.attr("width");
-    const height = svgIncome.attr("height");
+    const svgGlobal = d3.select("#mapGlobal");
+    const width = svgGlobal.attr("width");
+    const height = svgGlobal.attr("height");
     const margin = { top: 20, right: 20, bottom: 20, left: 20 };
     const mapWidth = width - margin.left - margin.right;
     const mapHeight = height - margin.top - margin.bottom;
 
-    const mapIncome = svgIncome.append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    const svgTreeCount = d3.select("#mapTreeCount");
-    const mapTreeCount = svgTreeCount.append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    //row 2 elements
-    const svgKey = d3.select("#mapKey");
-    const keyWidth = svgKey.attr("width") - margin.left - margin.right;
-    const keyHeight = svgKey.attr("height") - margin.top - margin.bottom;
-
-    const mapKey = svgKey.append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    const svghighincome = d3.select("#tract_highincome");
-    const maphighincome = svghighincome.append("g")
-      .attr("transform", "translate(" + margin.left + "," + 10 + ")");
-
-    const svglowincome = d3.select("#tract_lowincome");
-    const maplowincome = svglowincome.append("g")
-      .attr("transform", "translate(" + margin.left + "," + 10 + ")");
-
-    const scatterplot = d3.select("#scatterplot");
-    const scatterWidth = scatterplot.attr("width");
-    const scatterHeight = scatterplot.attr("height");
-    const marginScatter = { top: 15, right: 15, bottom: 45, left: 50 };
-
-    const annotations = scatterplot.append("g").attr("id", "scatterplot annotations")
-    const mapScatter = scatterplot.append("g")
-      .attr("transform", "translate(" + marginScatter.left + "," + marginScatter.top + ")");
-    const mapScatterWidth = scatterWidth - marginScatter.left - marginScatter.right;
-    const mapScatterHeight = scatterHeight - marginScatter.top - marginScatter.bottom;
+    const viewport = svgGlobal.append("g");
+    // .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     // map geojson
     const requestData = async function () {
 
-      //load data by census tracts
-      const tracts = await d3.json("./tree_by_census_tracts.geojson");
+      //load power plant data
+      const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      const countries = await d3.json("./countries.geojson");
+
+      console.log(powerPlants);
+      console.log(countries);
 
       // Mercator projection
-      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], tracts);
+      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
       var path = d3.geoPath().projection(projection);
 
       //scales for income and treeCount
-      const incomeExtent = d3.extent(tracts.features, d => d.properties["est household mean income"]);
-      const incomeColorScale = d3.scaleQuantile()
-        .domain(incomeExtent)
-        .range(d3.schemeBlues[6]);
+      const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
+      const capacityScale = d3.scaleLinear()
+        .domain(capacityExtent)
+        .range([1, 5]);
+      console.log(capacityExtent)
 
-      const treeCountExtent = d3.extent(tracts.features, d => d.properties["TreeCount"]);
-      const treeCountColorScale = d3.scaleQuantile()
-        .domain(treeCountExtent)
-        .range(d3.schemeGreens[6]);
-
-      // census tracts for income map
-      mapIncome.selectAll("path.tractsIncome").data(tracts.features)
-        .join("path")
-        .attr("class", "tractsIncome")
-        .attr("d", path)
-        .attr("fill", d => incomeColorScale(d.properties["est household mean income"]));
-      drawLegend("#legendIncome", incomeColorScale, d3.format("$.2s"));
-
-      // census tracts for tree count map
-      mapTreeCount.selectAll("path.tractsTreeCount").data(tracts.features)
-        .join("path")
-        .attr("class", "tractsTreeCount")
-        .attr("d", path)
-        .attr("fill", d => treeCountColorScale(d.properties["TreeCount"]));
-      drawLegend("#legendTreeCount", treeCountColorScale, d3.format(".2s"));
-
-
-      // const trees = await d3.csv("./Street_Tree_List-2022-01-30_FILTERED.csv", d3.autoType);
-
-      const timeParser = d3.timeParse("%m/%d/%y %H:%M")
-      const today = timeParser("1/31/24 0:00")
-
-      //the entire tree dataset takes a long time to process, so instead I hardcoded the domains after I processed the data once
-      //below is code used to get extents and domains for tree diameter and plant date
-
-      // trees.forEach(d => {
-
-      //   // Use the projection just like a scale to convert from lng/lat to pixels
-      //   d.Position = projection([d.Longitude, d.Latitude]);
-
-      //   //parse time, and adjust if parsed year wrong (eg. 1960 as 2060)
-      //   time = timeParser(d['PlantDate']);
-      //   if (time > today) {
-      //     time = d3.utcYear.offset(time, -100)
-      //   };
-      //   d['PlantDate'] = time;
-
-      // });
-
-      // const diameterExtent = d3.extent(trees, d => d['DBH']);
-      // const diameterScale = d3.scaleLinear().domain(diameterExtent).range([2, 10]);
-
-      // const dateExtent = d3.extent(trees, d => d['PlantDate']);
-      // const dateScale = d3.scaleLinear().domain(dateExtent).range([1, 0]);
-      // console.log(dateExtent)
-
-      const diameterScale = d3.scaleLinear().domain([0, 151]).range([2, 10]);
-
-      const dateStart = d3.utcYear.offset(timeParser("2/06/56 0:00"), -100)
-      const dateEnd = timeParser("1/24/22 0:00")
-      const dateScale = d3.scaleLinear().domain([dateStart, dateEnd]).range([1, 0]);
-
-      //map key for second row
-      const highlightTracts = ["Census Tract 133", "Census Tract 120.01", "Census Tract 121", "Census Tract 120.02", "Census Tract 122.02", "Census Tract 122.03", "Census Tract 122.04", "Census Tract 123.01", "Census Tract 123.02"]
-
-      var projectionKey = d3.geoMercator().fitSize([keyWidth, keyHeight], tracts);
-      var pathKey = d3.geoPath().projection(projectionKey);
-
-      tracts.features.forEach(d => {
-
-        if (highlightTracts.includes(d.properties["NAME"])) {
-          d.properties['highlightColor'] = incomeColorScale(d.properties["est household mean income"]);
-        }
-        else { d.properties['highlightColor'] = "#AAA" }
+      powerPlants.forEach(d => {
+        d.Position = projection([d.longitude, d.latitude]);
       })
 
-      mapKey.selectAll("path.tractsKey").data(tracts.features)
+      // countries for base map
+      viewport.selectAll("path.countries").data(countries.features)
         .join("path")
-        .attr("class", "tractsKey")
-        .attr("d", pathKey)
-        .attr("stroke", d => d.properties['highlightColor'])
-        .attr("stroke-width", 0.25)
-        .attr("fill", d => d.properties['highlightColor']);
+        .attr("class", "countries")
+        .attr("d", path);
 
-      //annotations of areas on map key
-      mapKey.append("text").text("A").attr("x", 100).attr("y", 110).attr("font-size", 12);
-      mapKey.append("text").text("B").attr("x", 162).attr("y", 116).attr("font-size", 12);
+      // drawLegend("#legendIncome", incomeColorScale, d3.format("$.2s"));
 
-      //load data for census tracts
-      const tracthighincome = await d3.json("./tract_highincome.geojson");
+      let circles = viewport.selectAll("circle").data(powerPlants)
+        .join("circle")
+        .attr("cx", d => d.Position[0])
+        .attr("cy", d => d.Position[1])
+        .attr("r", d => capacityScale(d["capacity_mw"]))
+        .attr("fill", "blue");
 
-      // Mercator projection
-      var projectionhighincome = d3.geoMercator().fitSize(
-        [svghighincome.attr("width") - margin.left - margin.right,
-        svghighincome.attr("height") - margin.top - margin.bottom],
-        tracthighincome);
-      var pathhighincome = d3.geoPath().projection(projectionhighincome);
+      circles.on("mouseover", function () {
+        let name = d3.select(this).datum()["name"];
+        let capacity = d3.select(this).datum()["capacity_mw"];
 
-      // census tracts for income map
-      maphighincome.selectAll("path.tracthighincome").data(tracthighincome.features)
-        .join("path")
-        .attr("class", "tracthighincome")
-        .attr("d", pathhighincome)
-        .attr("fill", "#AAA")
-        .attr("stroke", "#AAA");
-
-      //map trees
-      const treeshighincome = await d3.json("./tree_highincome.geojson");
-      treeshighincome.features.forEach(d => {
-
-        d.Position = (projectionhighincome([d.properties['Longitude'], d.properties['Latitude']]));
-
-        //parse time, and adjust if parsed year wrong (eg. 1960 as 2060)
-        time = timeParser(d.properties['PlantDate']);
-        if (time > today) {
-          time = d3.utcYear.offset(time, -100)
-        };
-        d.properties['PlantDate'] = time;
+        d3.select("#plantName").text(`Name: ${name}`);
+        d3.select("#plantCapacity").text(`Capacity: ${capacity} mW`);
       });
 
-      // Draw circles using the Positions we just made
-      maphighincome.selectAll("circle").data(treeshighincome.features)
-        .join("circle")
-        .attr("r", d => diameterScale(d.properties['DBH']))
-        .attr("fill", d => d3.interpolateGreens(dateScale(d.properties["PlantDate"])))
-        .attr("opacity", 0.5)
-        .attr("cx", d => d.Position[0])
-        .attr("cy", d => d.Position[1]);
-
-      //annotations
-      maphighincome.append("text").text("A").attr("x", 220).attr("y", 110).attr("font-size", 12);
-      let highincomeTreeCount = 0;
-      let highincomeAvgIncome = 0;
-
-      [highincomeTreeCount, highincomeAvgIncome] = sumTreeCount_avgMeanIncome(tracthighincome);
-
-      //annotations of areas on map key
-      d3.select("#highincome_income")
-        .append("text")
-        .text(`mean household income: ${d3.format("$,")(highincomeAvgIncome)}`);
-
-      d3.select("#highincome_trees")
-        .append("text")
-        .text(`number of trees: ${highincomeTreeCount}`);
-
-      //tracts of low incomes
-      const tractlowincome = await d3.json("./tract_lowincome.geojson");
-
-      // Mercator projection
-      var projectionlowincome = d3.geoMercator().fitSize([svglowincome.attr("width") - margin.left - margin.right, svglowincome.attr("height") - margin.top - margin.bottom], tractlowincome);
-      var pathlowincome = d3.geoPath().projection(projectionlowincome);
-
-      // census tracts for income map
-      maplowincome.selectAll("path.tractlowincome").data(tractlowincome.features)
-        .join("path")
-        .attr("class", "tractlowincome")
-        .attr("d", pathlowincome)
-        .attr("fill", "#AAA")
-        .attr("stroke", "#AAA");
-
-      const treeslowincome = await d3.json("./tree_lowincome.geojson");
-
-      treeslowincome.features.forEach(d => {
-        d.Position = (projectionlowincome([d.properties['Longitude'], d.properties['Latitude']]));
-
-        //parse time, and adjust if parsed year wrong (eg. 1960 as 2060)
-        time = timeParser(d.properties['PlantDate']);
-        if (time > today) {
-          time = d3.utcYear.offset(time, -100)
-        };
-        d.properties['PlantDate'] = time;
+      circles.on("mouseout", function () {
+        d3.select("#plantName").text("");
+        d3.select("#plantCapacity").text("");
       });
 
-      maplowincome.selectAll("circle").data(treeslowincome.features)
-        .join("circle")
-        .attr("r", d => diameterScale(d.properties['DBH']))
-        .attr("fill", d => d3.interpolateGreens(dateScale(d.properties["PlantDate"])))
-        .attr("opacity", 0.5)
-        .attr("cx", d => d.Position[0])
-        .attr("cy", d => d.Position[1]);
+      // // census tracts for tree count map
+      // mapTreeCount.selectAll("path.tractsTreeCount").data(tracts.features)
+      //   .join("path")
+      //   .attr("class", "tractsTreeCount")
+      //   .attr("d", path)
+      //   .attr("fill", d => treeCountColorScale(d.properties["TreeCount"]));
+      // drawLegend("#legendTreeCount", treeCountColorScale, d3.format(".2s"));
 
-      //annotations
-      maplowincome.append("text").text("B").attr("x", 220).attr("y", 110).attr("font-size", 12);
-      let lowincomeTreeCount = 0;
-      let lowincomeAvgIncome = 0;
+      var zoom = d3.zoom()
+        // .scaleExtent([1, 20])
+        // .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])  // to lock to edges
+        .on("zoom", mapZoomed);
 
-      [lowincomeTreeCount, lowincomeAvgIncome] = sumTreeCount_avgMeanIncome(tractlowincome);
+      // viewport.on(".zoom", function (event) {
+      //   console.log(event);
+      // })
 
-      //annotations of areas on map key
-      d3.select("#lowincome_income")
-        .append("text")
-        .text(`mean household income: ${d3.format("$,")(lowincomeAvgIncome)}`);
+      svgGlobal.call(zoom);
+      svgGlobal.call(zoom.transform, d3.zoomIdentity);
 
-      d3.select("#lowincome_trees")
-        .append("text")
-        .text(`number of trees: ${lowincomeTreeCount}`);
+      // from INFO3300 lecture on panning and zooming
+      function mapZoomed({ transform }) {
 
-      //scatterplot
-      const incomeScale = d3.scaleLinear().domain(incomeExtent).range([0, mapScatterWidth]);
-      const treeCountScale = d3.scaleLinear().domain(treeCountExtent).range([mapScatterHeight, 0]);
+        console.log(transform);
+        // Transform the group object to reflect the zoom action
+        viewport.attr("transform", transform.toString());
+        // NOTE: we could also instead adjust projection and path to account for the zoom
+        //  However, projections can be time-consuming to calculate, leading to laggy interactions
+        //  For some projections like orthographic, you need to recompute the projection to deliver a
+        //   consistent user experience (e.g. adjust lambda for the projection to rotate the globe)
 
-      // make axes and grids
-      let leftAxis = d3.axisLeft(treeCountScale);
-      let leftGridLines = d3.axisLeft(treeCountScale).tickSize(-mapScatterWidth - 10).tickFormat("");
-      let bottomAxis = d3.axisBottom(incomeScale).tickFormat(d3.format("$.0s"));
-      let bottomGridLines = d3.axisBottom(incomeScale).tickSize(-mapScatterHeight - 10).tickFormat("");
+        // Divide by scale to make sure strokes remain a consistent width during zooming
+        viewport.select(".countries")
+          .style("stroke-width", 1 / transform.k);
+        // console.log(viewport.select(".plantLocation"));
 
-      annotations.append("g").attr("class", "y axis")
-        .attr("transform", `translate(${marginScatter.left - 10}, ${marginScatter.top})`)
-        .call(leftAxis);
-      annotations.append("g").attr("class", "y gridlines")
-        .attr("transform", `translate(${marginScatter.left - 10}, ${marginScatter.top})`)
-        .call(leftGridLines);
-      annotations.append("g").attr("class", "x axis")
-        .attr("transform", `translate(${marginScatter.left}, ${mapScatterHeight + marginScatter.top + 10})`)
-        .call(bottomAxis);
-      annotations.append("g").attr("class", "x gridlines")
-        .attr("transform", `translate(${marginScatter.left}, ${mapScatterHeight + marginScatter.top + 10})`)
-        .call(bottomGridLines);
+        // Expose county layer when sufficiently zoomed
+        // viewport.select(".county-outline")
+        //   .attr("visibility", (transform.k > 3) ? "visible" : "hidden");
+        // viewport.selectAll(".county")
+        //   .attr("visibility", (transform.k > 3) ? "visible" : "hidden");
 
-      let circles = mapScatter.selectAll("circle.scatter").data(tracts.features)
-        .join("circle")
-        .attr("class", "scatter")
-        .attr("cx", d => {
-          return incomeScale(d.properties["est household mean income"])
-        }
-        )
-        .attr("cy", d => treeCountScale(d.properties["TreeCount"]))
-        .attr("r", 3)
-        .attr("opacity", 0.6)
-        .attr("fill", "#AAA");
+      }
 
     }
     requestData();
   </script>
 
   <script id="helper function">
+
     function sumTreeCount_avgMeanIncome(geodata) {
       let treeCount = 0;
       let meanIncomeSum = 0;
