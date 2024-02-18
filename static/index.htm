@@ -97,7 +97,7 @@
 
       //scales for income and treeCount
       const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
-      const capacityScale = d3.scaleLinear()
+      const capacityScale = d3.scaleLog()
         .domain(capacityExtent)
         .range([1, 5]);
       console.log(capacityExtent)
@@ -107,7 +107,7 @@
       })
 
       // countries for base map
-      viewport.selectAll("path.countries").data(countries.features)
+      let countryBoundaries = viewport.selectAll("path.countries").data(countries.features)
         .join("path")
         .attr("class", "countries")
         .attr("d", path);
@@ -119,7 +119,8 @@
         .attr("cx", d => d.Position[0])
         .attr("cy", d => d.Position[1])
         .attr("r", d => capacityScale(d["capacity_mw"]))
-        .attr("fill", "blue");
+        .attr("fill", "blue")
+        .attr("opacity", 0.5);
 
       circles.on("mouseover", function () {
         let name = d3.select(this).datum()["name"];
@@ -166,8 +167,9 @@
         //   consistent user experience (e.g. adjust lambda for the projection to rotate the globe)
 
         // Divide by scale to make sure strokes remain a consistent width during zooming
-        viewport.select(".countries")
+        countryBoundaries
           .style("stroke-width", 1 / transform.k);
+        circles.attr("r", d => capacityScale(d["capacity_mw"]) / transform.k);
         // console.log(viewport.select(".plantLocation"));
 
         // Expose county layer when sufficiently zoomed
