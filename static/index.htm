@@ -340,7 +340,7 @@
     console.log(primaryFuels)
 
     const svg = d3.select("#primaryfuel");
-    const margin = { top: 20, right: 150, bottom:50, left: 60};
+    const margin = { top: 0, right: 150, bottom:50, left: 60};
     const width = svg.attr("width") - margin.left - margin.right;  
     const height = svg.attr("height")- margin.top - margin.bottom;
     const g = svg.append("g")
@@ -404,7 +404,7 @@
       .padding([0.2]); 
 
     const y = d3.scaleLinear()
-    .domain([0, d3.max(series, c => d3.max(c, d => d[1]||0))])  
+    .domain([0, d3.max(series, c => d3.max(c, (d => d[1])||0))+ 620])  
     .rangeRound([height, 0]);
 
   
@@ -444,7 +444,7 @@
           .join("rect")
             .attr("x", (d, i) => x(continent[i]))  
             .attr("y", d => y(d[1]))
-            .attr("height", d => (y(d[0]) - y(d[1])) ||0)
+            .attr("height", d => (y(d[0]) - y(d[1]))||0)
             .attr("width", x.bandwidth())
           .attr("transform", `translate(${margin.left},0)`);
 
@@ -471,14 +471,46 @@
               .text(d => d.value)
               .attr("visibility", d => d.value >= 600? "visible" : "hidden")
               .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
-          .attr("y", d => (y(d[1]) + y(d[0])) / 2)
+          .attr("y", d => ((y(d[1]) + y(d[0])) /2 || 0))
           .attr("text-anchor", "middle")
           .attr("dominant-baseline", "central")
           .attr('style', 'font-size:10pt;')
           .attr('fill', 'white');
 
+        
+        // svg.append("g")
+        //   .selectAll("text")
+        //   .data(series)
+        //   .join("text")
+        //     // Position centered
+        //     .attr("x",(d, i) => x(continent[i]) + x.bandwidth()) 
+        //     .attr("y", d => y(0) - 5) 
+            
+        //     // Get total from data map
+        //     .text(d => console.log(totalPerContinent[d]))
           
-
+            // Add labels on top of the bars
+            svg.selectAll(".labels")
+                .data(series)
+                .enter()
+                .append("text")
+                // .attr("x", (d, i) => (x(continent[i]))||0)
+                .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
+                // .attr("y", d => (y(d[0])) || 0)  
+                .attr("y", (d, i) => {
+                  cont = ((continent[i]))
+                  return y(totalPerContinent[cont] || 0 )})
+                .text((d, i) => {
+                  cont = ((continent[i]))
+                  return (d3.format(',')(totalPerContinent[cont] || 0 )); })
+                .attr("visibility", (d,i) => (totalPerContinent[(continent[i])] > 0) ? "visible" : "hidden")
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "central")
+                .attr('style', 'font-size:10pt;')
+                .attr('style', 'color: black;')
+                .attr('fill', 'black')
+                .attr("transform", `translate(5, ${-10})`);
+                  
 
 
 
