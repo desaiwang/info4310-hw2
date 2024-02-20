@@ -308,22 +308,6 @@
                 });
     console.log(countryToContinent);
   
-    // // Group data by continent and primary fuel
-    // const groupedData = data_pm.reduce((acc, curr) => {
-    //                 const continent = countryToContinent[curr.country_long];
-    //                 if (!continent) {
-    //                     console.log(`Continent undefined for country: ${curr.country_long}`);
-    //                 }
-    //                 if (!acc[continent]) {
-    //                     acc[continent] = {};
-    //                 }
-    //                 const key = `${curr.primary_fuel}`;
-    //                 if (!acc[continent][key]) {
-    //                     acc[continent][key] = 0;
-    //                 }
-    //                 acc[continent][key]++;
-    //                 return acc;
-    //             }, {});]
 
     const groupedData = {};
     data_pm.forEach(d => {
@@ -360,34 +344,7 @@
     const width = svg.attr("width") - margin.left - margin.right;  
     const height = svg.attr("height")- margin.top - margin.bottom;
     const g = svg.append("g")
-    // .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-    
-    // const stackedData = continentss.map(continent => {
-    // return {
-    //     continent: continent,
-    //     values: primaryFuels.map(fuel => ({ fuel: fuel, count: groupedData[continent][fuel] || 0 }))
-    // };
-    // });
 
-
-// const stackedData = continentss.map(c => {
-//   return primaryFuels.map(fuel => ({
-//       continent: c,
-//       fuel: fuel, 
-//       value: groupedData[c][fuel] || 0
-//   })); 
-// })
-
-//THIS IS THE ONE YOU COMMENTED OUT:
-// const stackedData = continentss.map(c => {
-//     return {
-//         continent: c,
-//         values: primaryFuels.map(fuel => ({
-//             fuel: fuel,
-//             count: groupedData[c][fuel] || 0
-//         }))
-//     };
-// });
 
     const continents = ["Africa", "Antarctica", "Asia", "Europe", "North America", "Oceania", "South America"];
 
@@ -407,16 +364,7 @@
       stackedData.push(entry);
 
       });
-      // Object.keys(groupedData).forEach(continent => {
-      //   const fuels = Object.keys(groupedData[continent]);
-      //   stackedData.push({
-      //     continent: continent,
-      //     fuels: fuels.map(fuel => ({
-      //       fuel: fuel,
-      //       value: groupedData[continent][fuel]
-      //     }))
-      //   }); 
-      // });
+
 
       console.log(stackedData)
       const continent = stackedData.map(d => d.continent);
@@ -432,40 +380,14 @@
         .value( (d, key) => {
         const row = index.get(d); // Get data object 
         return row[key]; // Return value 
-      });
+      })
+      .order(d3.stackOrderAscending);
 
-      const series = stack(continent);
-      console.log(series)
-
-
-
-    // stackedData.forEach(d => {
-    //   Object.values(d).forEach(v => v += 10);  
-    // });
-
-
-    /* 
-    // create stack data
-    const series = d3.stack()
-  .keys (pop_trees_by_counts)
-  .value((L, group], key) => group. get (key) . Count) (d3. index (data, d => d.Neighborhood, d => d. qSpecies) );
     
-    *///YOU ALSO COMMENTED  OUT BELOW HERE LATEST:
-    // console.log(stackedData)
-    // const series = d3.stack()
-    //   .keys(primaryFuels)
-    //   .value(d => d.count)(stackedData.map(c => c.values));
-      // .value(([, fuels], fuel) => fuels[fuel].count)(d3.index(stackedData, d => d.continent, d => d.values))
-      // .order(d3.stackOrderNone)
-      // .offset(d3.stackOffsetNone);
 
-    // const stackedSeries = stack(continents.map(c => {
-    //   // return Object.values(groupedData[c]).filter(d => d > 0) ;  
-    //   return primaryFuels.map(fuel => groupedData[c][fuel] || 0)
-    // }));
-  //     const stackedSeries = stack(primaryFuels.map(fuel => {
-  //   return continents.map(c => groupedData[c][fuel] || 0) 
-  // }));
+      var series = stack(continent);
+
+      console.log(series)
 
   const stackedSeries = primaryFuels.map(fuel => {
   return {
@@ -482,29 +404,32 @@
       .padding([0.2]); 
 
     const y = d3.scaleLinear()
-    .domain([0, d3.max(series, c => d3.max(c, d => d[1]))])  
-    // .domain([0, d3.max(stackedSeries, series => {
-    // return d3.max(series.values)  
-    //   })
-    //   ])
+    .domain([0, d3.max(series, c => d3.max(c, d => d[1]||0))])  
     .rangeRound([height, 0]);
 
   
+    colors = [
+  "#a6cee3",  
+  "#ff7f00",
+  "#b2df8a",
+  "#33a02c",
+  "#fb9a99",
+  "#e31a1c",
+  "#fdbf6f",
+  "#1f78b4",
+  "#cab2d6",
+  "#6a3d9a",  
+  "#b15928",
+  "#000000",
+  "#cccccc",
+  "#fdda24", 
+  "#b15928"
+]
 
     const color = d3.scaleOrdinal()
     .domain(primaryFuels)
-    .range(d3.schemeCategory10)
+    .range(colors)
   
-//         // create stack data
-//         const series = d3.stack()
-//           .keys(primaryFuels)
-//           .value(([, group], key) => group.get(key).count)
-//           (d3.index(stackedData, d => d.continent, d => d.count));
-//           // ([groupedData])
-
-//         console.log(series);
-          // .value(([, group], key) => group.get(key).Count)
-          // (d3.index(data, d => d.Neighborhood, d => d.qSpecies));
 
 
       const total = d3.extent(Object.values(totalPerContinent))
@@ -517,26 +442,47 @@
           .selectAll("rect")
           .data(d => d) 
           .join("rect")
-            .attr("x", (d, i) => x(continents[i]))  
+            .attr("x", (d, i) => x(continent[i]))  
             .attr("y", d => y(d[1]))
-            .attr("height", d => y(d[0]) - y(d[1]))
-            .attr("width", x.bandwidth()); 
+            .attr("height", d => (y(d[0]) - y(d[1])) ||0)
+            .attr("width", x.bandwidth())
+          .attr("transform", `translate(${margin.left},0)`);
 
-      // svg.append("g")
-      //   .selectAll("g")
-      //   .data(stackedSeries)
-      //   .join("g")
-      //   .attr("fill", d => color(d.key))
-      //   .selectAll("rect")
-      //   .data(d => d)
-      //   .join("rect")
-      //   .attr("x", (d, i) => x(continents[i]))
-      //   .attr("y", d => y(d[1]))
-      //   .attr("height", d =>(y(d[0]) - y(d[1])))
-      //   .attr("width", x.bandwidth())
-        // .attr("transform", `translate(500,0)`);
+          // svg.append("g")
+          // .selectAll()
+          //   .data(d => d.map(v => ({...v, key: d.key, value: v[1] - v[0]})))
+          //   .join("text")
+          //     .text(d => d.value)
+          //     .attr("visibility", d => d.value >= 600 ? "visible" : "hidden")
+          //     .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
+          // .attr("y", d => (y(d[1]) + y(d[0])) / 2)
+          // .attr("text-anchor", "middle")
+          // .attr("dominant-baseline", "central")
+          // .attr('style', 'font-size:10pt;')
+          // .attr('fill', 'white')
+
+          svg.append("g")
+          .selectAll()
+          .data(series) 
+          .join("g")
+            .selectAll("text")
+            .data(d => d.map(v => ({...v, key: d.key, value: v[1] - v[0]})))
+            .join("text")
+              .text(d => d.value)
+              .attr("visibility", d => d.value >= 600? "visible" : "hidden")
+              .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
+          .attr("y", d => (y(d[1]) + y(d[0])) / 2)
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr('style', 'font-size:10pt;')
+          .attr('fill', 'white');
+
+          
 
 
+
+
+  
         // axes
         svg.append("g")
           .attr("transform", `translate(${margin.left}, ${height})`)
@@ -552,7 +498,7 @@
             .attr("transform", `translate(${width+75},20)`)
 
 
-          legend.selectAll("rect") 
+        legend.selectAll("rect") 
               .data(primaryFuels)
               .join("rect")
                 .attr("y", (d, i) => i * 20)  
@@ -560,13 +506,17 @@
                 .attr("height", 10)
                 .attr("fill", d => color(d)); 
 
-          legend.selectAll("text")
+        legend.selectAll("text")
               .data(primaryFuels)
               .join("text")
                 .attr("y", (d, i) => i * 20 + 9) 
                 .attr("x", 12) 
                 .text(d => d)
                 .attr("fill", "black");
+
+              // bar labels when count >= 50
+       
+
         
     }
     requestDataPF();
