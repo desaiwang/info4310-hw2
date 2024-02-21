@@ -43,6 +43,13 @@
     .gridlines .domain {
       stroke: none;
     }
+    .serie rect {
+    fill-opacity: 0.8;
+    }
+
+    .serie:hover rect {
+    fill-opacity: 1;
+    } 
   </style>
 
 </head>
@@ -63,6 +70,10 @@
       </div> -->
     </div>
     <svg id="map" width="1500" height="1000"></svg>
+    <svg id ="primaryFuel" width = "1200" height = "500"></svg>
+    <svg id ="pfCountry" width = "1200" height = "500"></svg>
+    <svg id="powerPlants" width="1200" height="500"></svg>
+
 
 
   </div>
@@ -70,7 +81,7 @@
   </div>
 
 
-  <script>
+  <!-- <script>
 
     //row 1 elements
     const svgGlobal = d3.select("#mapGlobal");
@@ -193,7 +204,7 @@
       }
 
     }
-    requestData();
+    // requestData();
   </script>
 
   <script id="helper function">
@@ -296,7 +307,551 @@
 
     }
 
+  </script> -->
+
+  <script>
+    const requestDataPF = async function () {
+    var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+    var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
+    console.log(countries_continents);
+    console.log(data_pm)
+    const countryToContinent = {};
+    countries_continents.forEach(entry => {
+                    const country = entry.Entity.trim();
+                    const continent = entry.Continent.trim();
+                    countryToContinent[country] = continent;
+                });
+    console.log(countryToContinent);
+  
+
+    const groupedData = {};
+    data_pm.forEach(d => {
+        const continent = countryToContinent[d.country_long];
+        if(!continent) return ; // handle invalid
+        
+        if(!groupedData[continent]) {
+          groupedData[continent] = {}; 
+        }
+        
+        if(!groupedData[continent][d.primary_fuel]) {
+          groupedData[continent][d.primary_fuel] = 0; 
+        }
+        
+        groupedData[continent][d.primary_fuel]++;
+      });
+
+
+    console.log(groupedData);
+    const continentss = Object.keys(groupedData);
+    const primaryFuels = [...new Set(data_pm.map(entry => entry.primary_fuel))];
+   
+    const totalPerContinent = {};
+    for (const continent in groupedData) {
+        const key = `${continent}`;
+        totalPerContinent[continent] = d3.sum(Object.values(groupedData[continent]));
+    }
+    console.log(totalPerContinent)
+    console.log(continentss)
+    console.log(primaryFuels)
+
+    const svg = d3.select("#primaryfuel");
+    const margin = { top: 0, right: 150, bottom:50, left: 60};
+    const width = svg.attr("width") - margin.left - margin.right;  
+    const height = svg.attr("height")- margin.top - margin.bottom;
+    const g = svg.append("g")
+
+
+    const continents = ["Africa", "Antarctica", "Asia", "Europe", "North America", "Oceania", "South America"];
+
+    const stackedData = [];
+    Object.keys(groupedData).forEach(continent => {
+
+      const fuels = Object.keys(groupedData[continent]);  
+
+      const entry = {
+        continent: continent 
+      };
+
+      fuels.forEach(fuel => {
+        entry[fuel] = groupedData[continent][fuel]; 
+      });
+
+      stackedData.push(entry);
+
+      });
+
+
+      console.log(stackedData)
+      const continent = stackedData.map(d => d.continent);
+
+      // Create index 
+      const index = d3.index(stackedData, d => d.continent);  
+
+      // Access counts
+      const value = (d, fuel) => d.get(fuel); 
+
+      const stack = d3.stack()
+        .keys(primaryFuels)
+        .value( (d, key) => {
+        const row = index.get(d); // Get data object 
+        return row[key]; // Return value 
+      })
+      .order(d3.stackOrderAscending);
+
+    
+
+      var series = stack(continent);
+
+      console.log(series)
+
+  const stackedSeries = primaryFuels.map(fuel => {
+  return {
+    key: fuel, 
+    values: continents.map(c => groupedData[c][fuel] || 0)
+  }
+});
+
+    console.log(stackedSeries);
+
+    const x = d3.scaleBand()
+      .domain(stackedData.map(d => d.continent))
+      .range([0, width])
+      .padding([0.2]); 
+
+    const y = d3.scaleLinear()
+    .domain([0, d3.max(series, c => d3.max(c, (d => d[1])||0))+ 620])
+    .rangeRound([height, 0]);
+
+  
+    colors = [
+  "#a6cee3",  
+  "#ff7f00",
+  "#b2df8a",
+  "#33a02c",
+  "#fb9a99",
+  "#e31a1c",
+  "#fdbf6f",
+  "#1f78b4",
+  "#cab2d6",
+  "#6a3d9a",  
+  "#b15928",
+  "#000000",
+  "#cccccc",
+  "#fdda24", 
+  "#b15928"
+]
+
+    const color = d3.scaleOrdinal()
+    .domain(primaryFuels)
+    .range(colors)
+  
+
+
+      const total = d3.extent(Object.values(totalPerContinent))
+
+      svg.append("g")
+        .selectAll(".continent")
+        .data(series)
+        .join("g")
+          .attr("fill", d => color(d.key))  
+          .selectAll("rect")
+          .data(d => d) 
+          .join("rect")
+            .attr("x", (d, i) => x(continent[i]))  
+            .attr("y", d => y(d[1]))
+            .attr("height", d => (y(d[0]) - y(d[1]))||0)
+            .attr("width", x.bandwidth())
+          .attr("transform", `translate(${margin.left},0)`);
+
+
+          svg.append("g")
+          .selectAll()
+          .data(series) 
+          .join("g")
+            .selectAll("text")
+            .data(d => d.map(v => ({...v, key: d.key, value: v[1] - v[0]})))
+            .join("text")
+              .text(d => d.value)
+              .attr("visibility", d => d.value >= 600? "visible" : "hidden")
+              .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
+          .attr("y", d => ((y(d[1]) + y(d[0])) /2 || 0))
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr('style', 'font-size:10pt;')
+          .attr('fill', 'white');
+          
+            // Add labels on top of the bars
+            svg.selectAll(".labels")
+                .data(series)
+                .enter()
+                .append("text")
+                // .attr("x", (d, i) => (x(continent[i]))||0)
+                .attr("x", (d, i) => (x(continent[i]) || 0) + x.bandwidth())
+                // .attr("y", d => (y(d[0])) || 0)  
+                .attr("y", (d, i) => {
+                  cont = ((continent[i]))
+                  return y(totalPerContinent[cont] || 0 )})
+                .text((d, i) => {
+                  cont = ((continent[i]))
+                  return (d3.format(',')(totalPerContinent[cont] || 0 )); })
+                .attr("visibility", (d,i) => (totalPerContinent[(continent[i])] > 0) ? "visible" : "hidden")
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "central")
+                .attr('style', 'font-size:10pt;')
+                .attr('style', 'color: black;')
+                .attr('fill', 'black')
+                .attr("transform", `translate(5, ${-10})`);
+                  
+
+
+
+  
+        // axes
+        svg.append("g")
+          .attr("transform", `translate(${margin.left}, ${height})`)
+          .call(d3.axisBottom(x)); 
+
+        svg.append("g")
+          .attr("transform", `translate(${margin.left},0)`)
+          .call(d3.axisLeft(y))
+
+
+
+        const legend = svg.append("g")
+            .attr("transform", `translate(${width+75},20)`)
+
+
+        legend.selectAll("rect") 
+              .data(primaryFuels)
+              .join("rect")
+                .attr("y", (d, i) => i * 20)  
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", d => color(d)); 
+
+        legend.selectAll("text")
+              .data(primaryFuels)
+              .join("text")
+                .attr("y", (d, i) => i * 20 + 9) 
+                .attr("x", 12) 
+                .text(d => d)
+                .attr("fill", "black");       
+
+        
+    }
+    requestDataPF();
   </script>
+
+<script>
+const requestData = async function () {
+            var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+
+            // Group power plant capacities by country and type of fuel
+            const groupedData = {};
+            data_pm.forEach(d => {
+                if (!groupedData[d.country_long]) {
+                    groupedData[d.country_long] = {};
+                }
+
+                if (!groupedData[d.country_long][d.primary_fuel]) {
+                    groupedData[d.country_long][d.primary_fuel] = 0;
+                }
+
+                groupedData[d.country_long][d.primary_fuel] += d.capacity_mw;
+            });
+
+            // Sort countries by total capacity and select top 10
+            var sortedCountries = Object.keys(groupedData).sort((a, b) => {
+                const totalCapacityA = Object.values(groupedData[a]).reduce((acc, val) => acc + val, 0);
+                const totalCapacityB = Object.values(groupedData[b]).reduce((acc, val) => acc + val, 0);
+                return totalCapacityB - totalCapacityA;
+            }).slice(0, 10);
+
+            // Extract fuel types
+            const fuelTypes = Array.from(new Set(data_pm.map(entry => entry.primary_fuel)));
+
+            // Prepare data for stacked bar chart
+            const stackedData = sortedCountries.map(country => {
+                const entry = { country };
+                fuelTypes.forEach(fuel => {
+                    entry[fuel] = groupedData[country][fuel] || 0;
+                });
+                return entry;
+            });
+
+            console.log(stackedData)
+
+            // Setup SVG dimensions and margins
+            const svg = d3.select("#pfCountry");
+            const margin = { top: 20, right: 150, bottom: 70, left: 60 };
+            const width = +svg.attr("width") - margin.left - margin.right;
+            const height = +svg.attr("height") - margin.top - margin.bottom;
+            const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Setup scales
+            const x = d3.scaleBand()
+                .domain(sortedCountries)
+                .range([0, width])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(stackedData, d => d3.sum(fuelTypes.map(fuel => d[fuel])))])
+                .nice()
+                .rangeRound([height, 0]);
+
+           
+    colors = [
+  "#a6cee3",  
+  "#ff7f00",
+  "#b2df8a",
+  "#33a02c",
+  "#fb9a99",
+  "#e31a1c",
+  "#fdbf6f",
+  "#1f78b4",
+  "#cab2d6",
+  "#6a3d9a",  
+  "#b15928",
+  "#000000",
+  "#cccccc",
+  "#fdda24", 
+  "#b15928"
+]
+
+    const color = d3.scaleOrdinal()
+    .domain(fuelTypes)
+    .range(colors)
+  
+
+            // Setup stack generator
+            const stack = d3.stack()
+                .keys(fuelTypes)
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
+
+            // Generate stacked data
+            const series = stack(stackedData);
+
+            // Append bars
+            g.selectAll(".serie")
+                .data(series)
+                .join("g")
+                .attr("class", "serie")
+                .attr("fill", d => color(d.key))
+                .selectAll("rect")
+                .data(d => d)
+                .join("rect")
+                .attr("x", d => x(d.data.country))
+                .attr("y", d => y(d[1]))
+                .attr("height", d => y(d[0]) - y(d[1]))
+                .attr("width", x.bandwidth());
+
+            // Append axes
+            g.append("g")
+                .attr("class", "axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x))
+                // .selectAll("text")
+                // .attr("y", 0)
+                // .attr("x", 9)
+                // // .attr("dy", ".35em")
+                // // .attr("transform", "rotate(90)")
+                // .style("text-anchor", "start");
+
+            g.append("g")
+                .attr("class", "axis")
+                .call(d3.axisLeft(y).ticks(null, "s"))
+                .append("text")
+                .attr("x", 2)
+                .attr("y", y(y.ticks().pop()) + 0.5)
+                .attr("dy", "0.32em")
+                .attr("fill", "#000")
+                .attr("font-weight", "bold")
+                .attr("text-anchor", "start")
+                .text("Capacity (MW)");
+
+            // Append legend
+            
+    // const legend = g.append("g")
+    //     .attr("font-family", "sans-serif")
+    //     .attr("font-size", 10)
+    //     .attr("text-anchor", "end")
+    //     .selectAll("g")
+    //     .data(fuelTypes.slice())
+    //     .join("g")
+    //     .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+    // legend.append("rect")
+    //     .attr("x", width - 19)
+    //     .attr("width", 19)
+    //     .attr("height", 19)
+    //     .attr("fill", color);
+
+    // legend.append("text")
+    //     .attr("x", width - 24)
+    //     .attr("y", 9.5)
+    //     .attr("dy", "0.32em")
+    //     .text(d => d);
+
+
+
+       const legend = svg.append("g")
+            .attr("transform", `translate(${width+75},20)`)
+
+
+        legend.selectAll("rect") 
+              .data(fuelTypes)
+              .join("rect")
+                .attr("y", (d, i) => i * 20)  
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", d => color(d)); 
+
+        legend.selectAll("text")
+              .data(fuelTypes)
+              .join("text")
+                .attr("y", (d, i) => i * 20 + 9) 
+                .attr("x", 12) 
+                .text(d => d)
+                .attr("fill", "black");   
+
+          }
+requestData();
+</script>
+<script>
+    const requestDataTopPlants = async function () {
+      var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+
+      // Sort power plants by capacity_mw and select top 10
+      const sortedPlants = data_pm.sort((a, b) => b.capacity_mw - a.capacity_mw).slice(0, 10);
+
+      // Extract fuel types
+      const fuelTypes = Array.from(new Set(data_pm.map(entry => entry.primary_fuel)));
+
+      // Setup SVG dimensions and margins
+      const svg = d3.select("#powerPlants");
+      const margin = { top: 20, right: 150, bottom: 70, left: 60 };
+      const width = +svg.attr("width") - margin.left - margin.right;
+      const height = +svg.attr("height") - margin.top - margin.bottom;
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Setup scales
+      const x = d3.scaleBand()
+          .domain(sortedPlants.map(d => d.name))
+          .range([0, width])
+          .padding(0.1);
+
+      const y = d3.scaleLinear()
+          .domain([0, d3.max(sortedPlants, d => d.capacity_mw)])
+          .nice()
+          .rangeRound([height, 0]);
+
+        colors = [
+        "#a6cee3",  
+        "#ff7f00",
+        "#b2df8a",
+        "#33a02c",
+        "#fb9a99",
+        "#e31a1c",
+        "#fdbf6f",
+        "#1f78b4",
+        "#cab2d6",
+        "#6a3d9a",  
+        "#b15928",
+        "#000000",
+        "#cccccc",
+        "#fdda24", 
+        "#b15928"
+      ]
+      const color = d3.scaleOrdinal()
+          .domain(fuelTypes)
+          .range(colors);
+
+      // Append bars
+      g.selectAll(".bar")
+          .data(sortedPlants)
+          .join("rect")
+          .attr("class", "bar")
+          .attr("x", d => x(d.name))
+          .attr("y", d => y(d.capacity_mw))
+          .attr("width", x.bandwidth())
+          .attr("height", d => height - y(d.capacity_mw))
+          .attr("fill", d => color(d.primary_fuel));
+
+      // Append axes
+      g.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x))
+          .selectAll("text")
+          .attr("dy", "1.5")
+          .attr("x", -9)
+          .attr("y", 0)
+          .attr("text-anchor", "end")
+          .attr("transform", "rotate(-45)")
+          .call(wrap, x.bandwidth());
+
+      g.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("Capacity (MW)");
+
+      // Append legend
+      const legend = svg.append("g")
+            .attr("transform", `translate(${width+75},20)`)
+
+
+        legend.selectAll("rect") 
+              .data(fuelTypes)
+              .join("rect")
+                .attr("y", (d, i) => i * 20)  
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", d => color(d)); 
+
+        legend.selectAll("text")
+              .data(fuelTypes)
+              .join("text")
+                .attr("y", (d, i) => i * 20 + 9) 
+                .attr("x", 12) 
+                .text(d => d)
+                .attr("fill", "black");   
+
+    function wrap(text, width) {
+            text.each(function() {
+                var text = d3.select(this),
+                    words = text.text().split(/\s+/).reverse(),
+                    word,
+                    line = [],
+                    lineNumber = 0,
+                    lineHeight = 1.1, // ems
+                    y = text.attr("y"),
+                    dy = parseFloat(text.attr("dy")),
+                    tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+                while (word = words.pop()) {
+                    line.push(word);
+                    tspan.text(line.join(" "));
+                    if (tspan.node().getComputedTextLength() > width) {
+                        line.pop();
+                        tspan.text(line.join(" "));
+                        line = [word];
+                        tspan = text.append("tspan").attr("x", 0).attr("y", y ).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+                    }
+                }
+            });
+
+  }
+}
+
+  requestDataTopPlants();
+</script>
 </body>
 
 </html>
