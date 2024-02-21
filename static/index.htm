@@ -11,7 +11,7 @@
     .countries {
       stroke: white;
       stroke-width: 1px;
-      fill: #bbb;
+      fill: #e8e8e8;
     }
 
     .row {
@@ -145,7 +145,8 @@
 
       powerPlants.forEach(d => {
         d.Position = projection([d.longitude, d.latitude]);
-        d.Color = colorScale(d["primary_fuel"])
+        d.Color = colorScale(d["primary_fuel"]);
+        d.Radius = capacityScale(d["capacity_mw"]);
       })
 
       // countries for base map
@@ -164,29 +165,47 @@
         .style("top", margin.top + 'px')
         .style("left", margin.left + 'px');
 
-      const svg = container.append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .style("position", "absolute")
-        .style("top", 0)
-        .style("left", 0);
+      // const svg = container.append("svg")
+      //   .attr("width", width)
+      //   .attr("height", height)
+      //   .style("position", "absolute")
+      //   .style("top", 0)
+      //   .style("left", 0);
 
       const context = canvas.node().getContext('2d');
-      context.clearRect(0, 0, width, height);
-      context.globalAlpha = 0.6;
-      powerPlants.forEach((d, i) => {
-        let x = d.Position[0];
-        let y = d.Position[1];
-        let rad = 3;
-        let color = d.Color;
 
-        context.fillStyle = color;
+
+
+      let r = 2;
+      d3.select(context.canvas).call(d3.zoom()
+        .scaleExtent([1, 20])
+        .on("zoom", ({ transform }) => zoomed(transform)));
+      function zoomed(transform) {
+        context.save();
+        context.clearRect(0, 0, width, height);
+        context.translate(transform.x, transform.y);
+        context.scale(transform.k, transform.k);
         context.beginPath();
-        context.arc(x, y, rad, 0, 2 * Math.PI);
-        context.fill();
+
+        powerPlants.forEach((d, i) => {
+          let x = d.Position[0];
+          let y = d.Position[1];
+          let rad = d.Radius;
+          let color = d.Color;
+
+          context.fillStyle = color;
+          context.beginPath();
+          context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
+          context.fill();
+        });
+
+        // context.fill();
+        context.restore();
+      }
+      zoomed(d3.zoomIdentity);
 
 
-      });
+
 
       let circles = viewport.selectAll("circle").data(powerPlants)
         .join("circle")
