@@ -369,7 +369,6 @@
 
       console.log(groupedData);
       const continentss = Object.keys(groupedData);
-      const primaryFuels = [...new Set(data_pm.map(entry => entry.primary_fuel))];
 
       const totalPerContinent = {};
       for (const continent in groupedData) {
@@ -378,7 +377,6 @@
       }
       console.log(totalPerContinent)
       console.log(continentss)
-      console.log(primaryFuels)
 
       const svg = d3.select("#primaryfuel");
       const margin = { top: 0, right: 150, bottom: 50, left: 60 };
@@ -417,12 +415,12 @@
       const value = (d, fuel) => d.get(fuel);
 
       const stack = d3.stack()
-        .keys(primaryFuels)
+        .keys(primaryFuelTypes)
         .value((d, key) => {
           const row = index.get(d); // Get data object 
           return row[key]; // Return value 
         })
-        .order(d3.stackOrderAscending);
+        .order(d3.stackOrderDescending);
 
 
 
@@ -430,7 +428,7 @@
 
       console.log(series)
 
-      const stackedSeries = primaryFuels.map(fuel => {
+      const stackedSeries = primaryFuelTypes.map(fuel => {
         return {
           key: fuel,
           values: continents.map(c => groupedData[c][fuel] || 0)
@@ -572,13 +570,11 @@
         return totalCapacityB - totalCapacityA;
       }).slice(0, 10);
 
-      // Extract fuel types
-      const fuelTypes = Array.from(new Set(data_pm.map(entry => entry.primary_fuel)));
 
       // Prepare data for stacked bar chart
       const stackedData = sortedCountries.map(country => {
         const entry = { country };
-        fuelTypes.forEach(fuel => {
+        primaryFuelTypes.forEach(fuel => {
           entry[fuel] = groupedData[country][fuel] || 0;
         });
         return entry;
@@ -600,38 +596,15 @@
         .padding(0.1);
 
       const y = d3.scaleLinear()
-        .domain([0, d3.max(stackedData, d => d3.sum(fuelTypes.map(fuel => d[fuel])))])
+        .domain([0, d3.max(stackedData, d => d3.sum(primaryFuelTypes.map(fuel => d[fuel])))])
         .nice()
         .rangeRound([height, 0]);
 
 
-      // colors = [
-      //   "#a6cee3",
-      //   "#ff7f00",
-      //   "#b2df8a",
-      //   "#33a02c",
-      //   "#fb9a99",
-      //   "#e31a1c",
-      //   "#fdbf6f",
-      //   "#1f78b4",
-      //   "#cab2d6",
-      //   "#6a3d9a",
-      //   "#b15928",
-      //   "#000000",
-      //   "#cccccc",
-      //   "#fdda24",
-      //   "#b15928"
-      // ]
-
-      // const color = d3.scaleOrdinal()
-      //   .domain(fuelTypes)
-      //   .range(colors)
-
-
       // Setup stack generator
       const stack = d3.stack()
-        .keys(fuelTypes)
-        .order(d3.stackOrderNone)
+        .keys(primaryFuelTypes)
+        .order(d3.stackOrderDescending)
         .offset(d3.stackOffsetNone);
 
       // Generate stacked data
@@ -750,27 +723,6 @@
         .domain([0, d3.max(sortedPlants, d => d.capacity_mw)])
         .nice()
         .rangeRound([height, 0]);
-
-      // colors = [
-      //   "#a6cee3",
-      //   "#ff7f00",
-      //   "#b2df8a",
-      //   "#33a02c",
-      //   "#fb9a99",
-      //   "#e31a1c",
-      //   "#fdbf6f",
-      //   "#1f78b4",
-      //   "#cab2d6",
-      //   "#6a3d9a",
-      //   "#b15928",
-      //   "#000000",
-      //   "#cccccc",
-      //   "#fdda24",
-      //   "#b15928"
-      // ]
-      // const color = d3.scaleOrdinal()
-      //   .domain(fuelTypes)
-      //   .range(colors);
 
       // Append bars
       g.selectAll(".bar")
