@@ -50,15 +50,17 @@
 <body>
   <div style="margin-top:30px">
     <h2 style="text-align: center"> Exploring Power Plants Around the World</h2>
+
     <div class="row 1">
-      <svg id="mapGlobal" width="1500" height="1000"></svg>
-      <div>
+      <svg id="mapGlobal" width="1000" height="600">
+        <!-- <text id="plantName" y="10" x="1000" alignment-baseline="hanging"></text>
+        <text id="plantCapacity" y="20" x="1000" alignment-baseline="hanging"></text> -->
+      </svg>
+      <!-- <div>
         <svg width="300" height="200">
-          <text id="plantName" y="10" alignment-baseline="hanging"></text>
-          <text id="plantCapacity" y="25" alignment-baseline="hanging"></text>
         </svg>
 
-      </div>
+      </div> -->
     </div>
     <svg id="map" width="1500" height="1000"></svg>
 
@@ -85,26 +87,26 @@
     const requestData = async function () {
 
       //load power plant data
-      const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      // const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
       const countries = await d3.json("./countries.geojson");
 
-      console.log(powerPlants);
-      console.log(countries);
+      // console.log(powerPlants);
+      // console.log(countries);
 
       // Mercator projection
       var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
       var path = d3.geoPath().projection(projection);
 
-      //scales for income and treeCount
-      const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
-      const capacityScale = d3.scaleLog()
-        .domain(capacityExtent)
-        .range([1, 5]);
-      console.log(capacityExtent)
+      // //scales for income and treeCount
+      // const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
+      // const capacityScale = d3.scaleLog()
+      //   .domain(capacityExtent)
+      //   .range([1, 5]);
+      // console.log(capacityExtent)
 
-      powerPlants.forEach(d => {
-        d.Position = projection([d.longitude, d.latitude]);
-      })
+      // powerPlants.forEach(d => {
+      //   d.Position = projection([d.longitude, d.latitude]);
+      // })
 
       // countries for base map
       let countryBoundaries = viewport.selectAll("path.countries").data(countries.features)
@@ -114,26 +116,39 @@
 
       // drawLegend("#legendIncome", incomeColorScale, d3.format("$.2s"));
 
-      let circles = viewport.selectAll("circle").data(powerPlants)
-        .join("circle")
-        .attr("cx", d => d.Position[0])
-        .attr("cy", d => d.Position[1])
-        .attr("r", d => capacityScale(d["capacity_mw"]))
-        .attr("fill", "blue")
-        .attr("opacity", 0.5);
+      // let circles = viewport.selectAll("circle").data(powerPlants)
+      //   .join("circle")
+      //   .attr("cx", d => d.Position[0])
+      //   .attr("cy", d => d.Position[1])
+      //   .attr("r", d => capacityScale(d["capacity_mw"]))
+      //   .attr("fill", "blue")
+      //   .attr("opacity", 0.5);
 
-      circles.on("mouseover", function () {
-        let name = d3.select(this).datum()["name"];
-        let capacity = d3.select(this).datum()["capacity_mw"];
+      let plantName = svgGlobal.append("text").attr("id", "plantName").attr("x", 20).attr("y", height - 70);
+      let plantCapacity = svgGlobal.append("text").attr("id", "plantCapacity").attr("x", 20).attr("y", height - 50);
+      let plantPrimaryFuel = svgGlobal.append("text").attr("id", "plantPrimaryFuel").attr("x", 20).attr("y", height - 30);
+      let plantCountry = svgGlobal.append("text").attr("id", "plantCountry").attr("x", 20).attr("y", height - 10);
 
-        d3.select("#plantName").text(`Name: ${name}`);
-        d3.select("#plantCapacity").text(`Capacity: ${capacity} mW`);
-      });
+      plantName.text(`Name: TestTestTestTestTestTestTest`);
+      plantCapacity.text(`Capacity: Test mW`);
+      plantCountry.text(`Location: Test mW`);
+      plantPrimaryFuel.text(`Primary Fuel: Test mW`);
 
-      circles.on("mouseout", function () {
-        d3.select("#plantName").text("");
-        d3.select("#plantCapacity").text("");
-      });
+      // circles.on("mouseover", function () {
+      //   let name = d3.select(this).datum()["name"];
+      //   let capacity = d3.select(this).datum()["capacity_mw"];
+      //   let country = d3.select(this).datum()["country_long"];
+
+      //   plantName.text(`Name: ${name}`);
+      //   plantCapacity.text(`Capacity: ${capacity} mW`);
+      //   plantCountry.text(`Location: ${country} mW`);
+      // });
+
+      // circles.on("mouseout", function () {
+      //   plantName.text("");
+      //   // d3.select("#plantName").text("");
+      //   // d3.select("#plantCapacity").text("");
+      // });
 
       // // census tracts for tree count map
       // mapTreeCount.selectAll("path.tractsTreeCount").data(tracts.features)
@@ -144,32 +159,29 @@
       // drawLegend("#legendTreeCount", treeCountColorScale, d3.format(".2s"));
 
       var zoom = d3.zoom()
-        // .scaleExtent([1, 20])
-        // .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])  // to lock to edges
+        .scaleExtent([1.25, 20])
+        .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])  // to lock to edges
         .on("zoom", mapZoomed);
 
       // viewport.on(".zoom", function (event) {
       //   console.log(event);
       // })
 
-      svgGlobal.call(zoom);
-      svgGlobal.call(zoom.transform, d3.zoomIdentity);
+      viewport.call(zoom);
+      viewport.call(zoom.transform, d3.zoomIdentity.scale(1.6).translate(-180, 0));
 
       // from INFO3300 lecture on panning and zooming
       function mapZoomed({ transform }) {
 
         console.log(transform);
         // Transform the group object to reflect the zoom action
-        viewport.attr("transform", transform.toString());
-        // NOTE: we could also instead adjust projection and path to account for the zoom
-        //  However, projections can be time-consuming to calculate, leading to laggy interactions
-        //  For some projections like orthographic, you need to recompute the projection to deliver a
-        //   consistent user experience (e.g. adjust lambda for the projection to rotate the globe)
+        viewport.attr("transform", transform);
 
         // Divide by scale to make sure strokes remain a consistent width during zooming
         countryBoundaries
           .style("stroke-width", 1 / transform.k);
-        circles.attr("r", d => capacityScale(d["capacity_mw"]) / transform.k);
+
+        // circles.attr("r", d => capacityScale(d["capacity_mw"]) / transform.k);
         // console.log(viewport.select(".plantLocation"));
 
         // Expose county layer when sufficiently zoomed
