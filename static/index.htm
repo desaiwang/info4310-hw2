@@ -2,8 +2,8 @@
 
 <head>
   <title>INFO 4310 - HW2</title>
-
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
+  <link href="./style.css" rel="stylesheet" type="text/css">
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://d3js.org/topojson.v2.min.js"></script>
@@ -12,11 +12,6 @@
       stroke: white;
       stroke-width: 1px;
       fill: #bbb;
-    }
-
-    .tractsTreeCount {
-      stroke: white;
-      stroke-width: 2px;
     }
 
     .row {
@@ -58,6 +53,8 @@
 <body>
   <div style="margin-top:30px">
     <h2 style="text-align: center"> Exploring Power Plants Around the World</h2>
+    <h5 style="text-align: center; margin-top: -65px; margin-bottom: 50px"> Natalia Jordan (naj46) and Desai Wang
+      (dw584)</h5>
 
     <div class="row 1">
       <svg id="mapGlobal" width="1000" height="600">
@@ -70,10 +67,14 @@
 
       </div> -->
     </div>
-    <svg id="map" width="1500" height="1000"></svg>
-    <svg id="primaryFuel" width="1200" height="500"></svg>
-    <svg id="pfCountry" width="1200" height="500"></svg>
-    <svg id="powerPlants" width="1200" height="500"></svg>
+    <div id="container" style="width: 1000px; height: 600px;"></div>
+    <!-- <svg id="map" width="1500" height="1000"></svg> -->
+    <div style="margin-top:100px">
+      <svg id="primaryFuel" width="1200" height="500"></svg>
+      <svg id="pfCountry" width="1200" height="500"></svg>
+      <svg id="powerPlants" width="1200" height="500"></svg>
+    </div>
+
 
 
 
@@ -82,7 +83,33 @@
   </div>
 
 
-  <!-- <script>
+  <script>
+
+    //establish color mapping for fuel types
+    const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+
+    colors = [
+      "#b2df8a",
+      "#a6cee3",
+      "#1f78b4",
+      "#33a02c",
+      "#ff7f00",
+      "#fb9a99",
+      "#e31a1c",
+      "#fdbf6f",
+      "#cab2d6",
+      "#6a3d9a",
+      "#b15928",
+      "#000000",
+      "#cccccc",
+      "#fdda24",
+      "#b15928"
+    ];
+
+    const colorScale = d3.scaleOrdinal()
+      .domain(primaryFuelTypes)
+      .range(colors);
+
 
     //row 1 elements
     const svgGlobal = d3.select("#mapGlobal");
@@ -99,7 +126,7 @@
     const requestData = async function () {
 
       //load power plant data
-      // const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
       const countries = await d3.json("./countries.geojson");
 
       // console.log(powerPlants);
@@ -109,16 +136,17 @@
       var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
       var path = d3.geoPath().projection(projection);
 
-      // //scales for income and treeCount
-      // const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
-      // const capacityScale = d3.scaleLog()
-      //   .domain(capacityExtent)
-      //   .range([1, 5]);
+      // power capacity
+      const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
+      const capacityScale = d3.scaleLog()
+        .domain(capacityExtent)
+        .range([1, 5]);
       // console.log(capacityExtent)
 
-      // powerPlants.forEach(d => {
-      //   d.Position = projection([d.longitude, d.latitude]);
-      // })
+      powerPlants.forEach(d => {
+        d.Position = projection([d.longitude, d.latitude]);
+        d.Color = colorScale(d["primary_fuel"])
+      })
 
       // countries for base map
       let countryBoundaries = viewport.selectAll("path.countries").data(countries.features)
@@ -126,15 +154,47 @@
         .attr("class", "countries")
         .attr("d", path);
 
-      // drawLegend("#legendIncome", incomeColorScale, d3.format("$.2s"));
+      const container = d3.select("#container").style("position", "relative");
 
-      // let circles = viewport.selectAll("circle").data(powerPlants)
-      //   .join("circle")
-      //   .attr("cx", d => d.Position[0])
-      //   .attr("cy", d => d.Position[1])
-      //   .attr("r", d => capacityScale(d["capacity_mw"]))
-      //   .attr("fill", "blue")
-      //   .attr("opacity", 0.5);
+      // Add a canvas element
+      const canvas = container.append("canvas")
+        .attr("width", mapWidth)
+        .attr("height", mapHeight)
+        .style("position", "absolute")
+        .style("top", margin.top + 'px')
+        .style("left", margin.left + 'px');
+
+      const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("left", 0);
+
+      const context = canvas.node().getContext('2d');
+      context.clearRect(0, 0, width, height);
+      context.globalAlpha = 0.6;
+      powerPlants.forEach((d, i) => {
+        let x = d.Position[0];
+        let y = d.Position[1];
+        let rad = 3;
+        let color = d.Color;
+
+        context.fillStyle = color;
+        context.beginPath();
+        context.arc(x, y, rad, 0, 2 * Math.PI);
+        context.fill();
+
+
+      });
+
+      let circles = viewport.selectAll("circle").data(powerPlants)
+        .join("circle")
+        .attr("cx", d => d.Position[0])
+        .attr("cy", d => d.Position[1])
+        .attr("r", d => capacityScale(d["capacity_mw"]))
+        .attr("fill", d => d.Color)
+        .attr("opacity", 0.5);
 
       let plantName = svgGlobal.append("text").attr("id", "plantName").attr("x", 20).attr("y", height - 70);
       let plantCapacity = svgGlobal.append("text").attr("id", "plantCapacity").attr("x", 20).attr("y", height - 50);
@@ -179,8 +239,8 @@
       //   console.log(event);
       // })
 
-      viewport.call(zoom);
-      viewport.call(zoom.transform, d3.zoomIdentity.scale(1.6).translate(-180, 0));
+      // viewport.call(zoom);
+      // viewport.call(zoom.transform, d3.zoomIdentity.scale(1.6).translate(-180, 0));
 
       // from INFO3300 lecture on panning and zooming
       function mapZoomed({ transform }) {
@@ -193,7 +253,7 @@
         countryBoundaries
           .style("stroke-width", 1 / transform.k);
 
-        // circles.attr("r", d => capacityScale(d["capacity_mw"]) / transform.k);
+        circles.attr("r", d => capacityScale(d["capacity_mw"]) / transform.k);
         // console.log(viewport.select(".plantLocation"));
 
         // Expose county layer when sufficiently zoomed
@@ -205,7 +265,7 @@
       }
 
     }
-    // requestData();
+    requestData();
   </script>
 
   <script id="helper function">
@@ -308,33 +368,9 @@
 
     }
 
-  </script> -->
+  </script>
 
   <script>
-
-    const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
-
-    colors = [
-      "#b2df8a",
-      "#a6cee3",
-      "#1f78b4",
-      "#33a02c",
-      "#ff7f00",
-      "#fb9a99",
-      "#e31a1c",
-      "#fdbf6f",
-      "#cab2d6",
-      "#6a3d9a",
-      "#b15928",
-      "#000000",
-      "#cccccc",
-      "#fdda24",
-      "#b15928"
-    ]
-
-    const colorScale = d3.scaleOrdinal()
-      .domain(primaryFuelTypes)
-      .range(colors);
 
     const requestDataPF = async function () {
       var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
@@ -546,7 +582,7 @@
   </script>
 
   <script>
-    const requestData = async function () {
+    const requestDataCountry = async function () {
       var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
 
       // Group power plant capacities by country and type of fuel
@@ -694,7 +730,7 @@
         .attr("fill", "black");
 
     }
-    requestData();
+    requestDataCountry();
   </script>
   <script>
     const requestDataTopPlants = async function () {
