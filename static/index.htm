@@ -83,6 +83,14 @@
 
   </div>
   <script>
+
+    const svgGlobal = d3.select("#mapGlobal");
+    const width = svgGlobal.attr("width");
+    const height = svgGlobal.attr("height");
+    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+    const mapWidth = width - margin.left - margin.right;
+    const mapHeight = height - margin.top - margin.bottom;
+
     const svgTransit = d3.select("#svgTransit");
     const widthTransit = svgTransit.attr("width");
     const heightTransit = svgTransit.attr("height");
@@ -94,17 +102,15 @@
     //monochrome style key: ckttxzrvq0s4i18l4he5vtltt
     const requestZoomableMapData = async () => {
 
-      //busstop data
-      const busstops = await d3.csv("./weekly_stops.csv", d3.autoType);
-      console.log(busstops)
+      //load power plant data
+      const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      const countries = await d3.json("./countries.geojson");
 
+      // console.log(powerPlants);
 
-      //this is the amount of times buses stop at station per week
-      const frequencyExtentTransit = d3.extent(busstops, d => d['weekly_stop_counts']);
-      const frequencyScaleTransit = d3.scaleLog().domain(frequencyExtentTransit).range([2.5, 15]);
-
-
-      //import route data for drawing edges
+      // Mercator projection
+      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
+      var path = d3.geoPath().projection(projection);
 
 
       const projectionTransit = d3.geoMercator()
@@ -112,7 +118,7 @@
         .translate([0, 0]);
 
 
-      const render = d3.geoPath(projectionTransit);
+      // const render = d3.geoPath(projectionTransit);
 
       const tile = d3.tile()
         .extent([[0, 0], [widthTransit, heightTransit]])
