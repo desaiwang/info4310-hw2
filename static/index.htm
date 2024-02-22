@@ -130,7 +130,8 @@
       const countries = await d3.json("./countries.geojson");
 
       // console.log(powerPlants);
-      // console.log(countries);
+      //console.log("")
+      console.log("countries", countries);
 
       // Mercator projection
       var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
@@ -158,12 +159,7 @@
       const container = d3.select("#container").style("position", "relative");
 
       // Add a canvas element
-      const canvas = container.append("canvas")
-        .attr("width", mapWidth)
-        .attr("height", mapHeight)
-        .style("position", "absolute")
-        .style("top", 0)
-        .style("left", 0);
+
 
       const svg = container.append("svg")
         .attr("width", width)
@@ -172,60 +168,95 @@
         .style("top", 0)
         .style("left", 0);
 
-      const interactiveArea = svg.append("g");
+      const canvas = container.append("canvas")
+        .attr("width", width)
+        .attr("height", height)
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("left", 0);
+
+      const mapAnnotations = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("left", 0);
+
+      const mapArea = svg.append("g");
+
+      mapArea.selectAll("path.countries").data(countries.features)
+        .join("path")
+        .attr("class", "countries")
+        .attr("d", path);
+
+      const interactiveArea = mapAnnotations.append("g");
       interactiveArea.append("rect")
         .attr("width", width)
         .attr("height", height)
         .attr("x", 0)
         .attr("y", 0)
         .attr("opacity", 0);
-      const label = svg.append("text").attr("x", margin.left + 10).attr("y", margin.top + 10);
+      const label = mapAnnotations.append("text").attr("x", margin.left + 10).attr("y", margin.top + 10);
       const context = canvas.node().getContext('2d');
 
+      interactiveArea.call(d3.zoom()
+        .scaleExtent([1, 20])
+        .on("zoom", ({ transform }) => zoomed(transform)));
+      let currTransform = d3.zoomIdentity;
 
       //zooming features
-      // let r = 2;
-      // d3.select(context.canvas).call(d3.zoom()
-      //   .scaleExtent([1, 20])
-      //   .on("zoom", ({ transform }) => zoomed(transform)));
+      let r = 2;
+      d3.select(context.canvas).call(d3.zoom()
+        .scaleExtent([1, 20])
+        .on("zoom", ({ transform }) => zoomed(transform)));
 
-      // function zoomed(transform) {
-      //   context.save();
-      //   context.clearRect(0, 0, width, height);
-      //   context.translate(transform.x, transform.y);
-      //   context.scale(transform.k, transform.k);
-      //   context.beginPath();
+      function zoomed(transform) {
+        mouseExited(); //temporarily disable circle highlighting
 
-      //   powerPlants.forEach((d, i) => {
-      //     let x = d.Position[0];
-      //     let y = d.Position[1];
-      //     let rad = d.Radius;
-      //     let color = d.Color;
+        currTransform = transform;
 
-      //     context.fillStyle = color;
-      //     context.beginPath();
-      //     context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
-      //     context.fill();
-      //   });
-      //   context.restore();
-      // }
-      // zoomed(d3.zoomIdentity);
-      context.save();
-      context.clearRect(0, 0, width, height);
-      context.beginPath();
+        mapArea.attr("transform", transform);
 
-      powerPlants.forEach((d, i) => {
-        let x = d.Position[0];
-        let y = d.Position[1];
-        let rad = d.Radius;
-        let color = d.Color;
-
-        context.fillStyle = color;
+        console.log(transform);
+        context.save();
+        context.clearRect(0, 0, width, height);
+        context.translate(transform.x, transform.y);
+        context.scale(transform.k, transform.k);
         context.beginPath();
-        context.arc(x, y, rad, 0, 2 * Math.PI);
-        context.fill();
-      });
-      context.restore();
+
+        powerPlants.forEach((d, i) => {
+          let x = d.Position[0];
+          let y = d.Position[1];
+          let rad = d.Radius;
+          let color = d.Color;
+
+          context.fillStyle = color;
+          context.beginPath();
+          context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
+          context.fill();
+        });
+        context.restore();
+      }
+      zoomed(d3.zoomIdentity);
+
+
+      //CODE FOR INTERACTIVITY
+      // context.save();
+      // context.clearRect(0, 0, width, height);
+      // context.beginPath();
+
+      // powerPlants.forEach((d, i) => {
+      //   let x = d.Position[0];
+      //   let y = d.Position[1];
+      //   let rad = d.Radius;
+      //   let color = d.Color;
+
+      //   context.fillStyle = color;
+      //   context.beginPath();
+      //   context.arc(x, y, rad, 0, 2 * Math.PI);
+      //   context.fill();
+      // });
+      // context.restore();
 
       const delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
 
@@ -233,14 +264,22 @@
       interactiveArea.on("mousemove", function (event) {
 
         let loc = d3.pointer(event);
+
+        loc_x = (loc[0] - currTransform.x) / currTransform.k;
+        loc_y = (loc[1] - currTransform.y) / currTransform.k;
+
+        console.log(currTransform)
+        console.log(loc[0], loc[1]);
+        console.log(loc_x, loc_y);
+
         let index;
         if (currentTarget === -1) {
           // Does a sweep of triangles, which should be O(sqrt(N)) in most cases
-          index = delaunay.find(loc[0], loc[1]);   // returns index of closest point
+          index = delaunay.find(loc_x, loc_y);   // returns index of closest point
         }
         else {
           // With a known point index that's nearby, you can speed up the lookups dramatically
-          index = delaunay.find(loc[0], loc[1], currentTarget)
+          index = delaunay.find(loc_x, loc_y, currentTarget)
         }
         // console.log(loc, index);
 
@@ -249,7 +288,7 @@
           console.log("mouseover");
           currentTarget = index;
           mouseExited();
-          mouseEntered(index);
+          mouseEntered(index, loc[0], loc[1]);
         }
       });
       // Also trigger "mouseout" when leaving interactive area
@@ -261,13 +300,17 @@
 
       function mouseEntered(i) {
         let d = powerPlants[i];
+
         interactiveArea.append("circle")
           .attr("id", "highlight")
-          .attr("cx", d.Position[0])
-          .attr("cy", d.Position[1])
+          .attr("cx", d.Position[0] * currTransform.k + currTransform.x)
+          .attr("cy", d.Position[1] * currTransform.k + currTransform.y)
           .attr("r", 5)
           .attr("stroke", "black")
-          .attr("fill", "none");
+          .attr("fill", "none")
+          // .attr("transform", `translate(${currTransform.x}, ${currTransform.y})`)
+          // .attr("transform", `scale(${currTransform.k}, ${currTransform.k})`)
+          ;
         label.text(d['name']);
 
       }
@@ -325,6 +368,8 @@
         .scaleExtent([1.25, 20])
         .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]])  // to lock to edges
         .on("zoom", mapZoomed);
+
+
 
       // viewport.on(".zoom", function (event) {
       //   console.log(event);
