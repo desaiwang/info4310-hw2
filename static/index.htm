@@ -84,22 +84,16 @@
   </div>
   <script>
 
-    const svgGlobal = d3.select("#mapGlobal");
-    const width = svgGlobal.attr("width");
-    const height = svgGlobal.attr("height");
-    const margin = { top: 20, right: 20, bottom: 20, left: 20 };
-    const mapWidth = width - margin.left - margin.right;
-    const mapHeight = height - margin.top - margin.bottom;
+    const mapArea = d3.select("#mapGlobal");
+    const width = mapArea.attr("width");
+    const height = mapArea.attr("height");
 
-    const svgTransit = d3.select("#svgTransit");
-    const widthTransit = svgTransit.attr("width");
-    const heightTransit = svgTransit.attr("height");
     const deltas = [-100, -4, -1, 0];
 
     let url = (x, y, z) =>
-      `https://api.mapbox.com/styles/v1/desaiwang/ckttxzrvq0s4i18l4he5vtltt/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
+      `https://api.mapbox.com/styles/v1/desaiwang/clswj0z9q00oq01p4ao6scxlh/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
 
-    //monochrome style key: ckttxzrvq0s4i18l4he5vtltt
+    //alt monochrome style key: ckttxzrvq0s4i18l4he5vtltt
     const requestZoomableMapData = async () => {
 
       //load power plant data
@@ -108,24 +102,13 @@
 
       // console.log(powerPlants);
 
-      // Mercator projection
-      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
-      var path = d3.geoPath().projection(projection);
-
-
-      const projectionTransit = d3.geoMercator()
-        .scale(1 / (2 * Math.PI))
-        .translate([0, 0]);
-
-
-      // const render = d3.geoPath(projectionTransit);
 
       const tile = d3.tile()
-        .extent([[0, 0], [widthTransit, heightTransit]])
+        .extent([[0, 0], [width, height]])
         .tileSize(512)
         .clampX(false);
 
-      const levels = svgTransit.append("g")
+      const levels = mapArea.append("g")
         .attr("pointer-events", "none")
         .selectAll("g")
         .data(deltas)
@@ -135,16 +118,14 @@
 
 
       var zoom = d3.zoom()
-        .scaleExtent([1 << 18.5, 1 << 25])
+        .scaleExtent([1 << 10, 1 << 19])
         .on("zoom", ({ transform }) => zoomed(transform));
 
-      svgTransit
+      mapArea
         .call(zoom)
         .call(zoom.transform, d3.zoomIdentity
-          .translate(widthTransit / 2, heightTransit / 2)
-          .scale(- 1 << 19)
-          .translate(...projectionTransit([-76.47, 42.46]))
-          .scale(-1)
+          .translate(width / 2, height / 2 + 100)
+          .scale(1 << 10)
         )
         .on("mousewheel.zoom", null)
         .on("DOMMouseScroll.zoom", null); //disable scrolling while zooming
@@ -165,12 +146,6 @@
             .attr("width", tiles.scale)
             .attr("height", tiles.scale);
         });
-
-
-
-        // projectionTransit
-        //   .scale(transform.k / (2 * Math.PI))
-        //   .translate([transform.x, transform.y]);
 
 
       }
