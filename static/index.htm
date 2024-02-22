@@ -68,8 +68,11 @@
 
       </div> -->
     </div>
-    <div id="container" style="width: 1000px; height: 600px;"></div>
-    <svg id="svgTransit" width="1000" height="600"></svg>
+    <div id="container" style="width: 1000px; height: 600px;">
+      <svg id="mapTile" width="1000" height="600"></svg>
+    </div>
+
+
     <div style="margin-top:100px">
       <svg id="primaryFuel" width="1200" height="500"></svg>
       <svg id="pfCountry" width="1200" height="500"></svg>
@@ -84,9 +87,23 @@
   </div>
   <script>
 
-    const mapArea = d3.select("#mapGlobal");
+    const container = d3.select("#container").style("position", "relative");
+
+    const mapArea = d3.select("#mapTile");
+
     const width = mapArea.attr("width");
     const height = mapArea.attr("height");
+
+    const canvas = container.append("canvas")
+      .attr("width", width)
+      .attr("height", height)
+      .style("position", "absolute")
+      .style("top", 0)
+      .style("left", 0);
+    const context = canvas.node().getContext('2d');
+
+    const interactiveArea = container.append("svg").attr("width", 1000).attr("height", 600);
+
 
     const deltas = [-100, -4, -1, 0];
 
@@ -102,6 +119,23 @@
 
       // console.log(powerPlants);
 
+      // Mercator projection
+      var projection = d3.geoMercator().scale(1 / (2 * Math.PI)).translate([0, 0]);
+      //d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
+      var path = d3.geoPath().projection(projection);
+
+      // power capacity
+      const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
+      const capacityScale = d3.scaleLog()
+        .domain(capacityExtent)
+        .range([1, 5]);
+
+
+      powerPlants.forEach(d => {
+        d.Position = projection([d.longitude, d.latitude]);
+        d.Radius = capacityScale(d["capacity_mw"]);
+      })
+
 
       const tile = d3.tile()
         .extent([[0, 0], [width, height]])
@@ -115,13 +149,21 @@
         .join("g")
         .style("opacity", null); //set to 0.3 to see low resolution files
 
+      // let circles = mapArea.selectAll("circle").data(powerPlants)
+      //   .join("circle")
+      //   .attr("cx", d => d.Position[0])
+      //   .attr("cy", d => d.Position[1])
+      //   .attr("r", d => d.Radius);
+
 
 
       var zoom = d3.zoom()
         .scaleExtent([1 << 10, 1 << 19])
         .on("zoom", ({ transform }) => zoomed(transform));
 
-      mapArea
+      container.on("mouseover", (event) => console.log(event));
+
+      container
         .call(zoom)
         .call(zoom.transform, d3.zoomIdentity
           .translate(width / 2, height / 2 + 100)
@@ -133,8 +175,29 @@
 
       function zoomed(transform) {
 
+        context.save();
+        context.clearRect(0, 0, width, height);
+        context.translate(transform.x, transform.y);
+        context.scale(transform.k, transform.k);
+        context.beginPath();
+
+        powerPlants.forEach((d, i) => {
+          let x = d.Position[0];
+          let y = d.Position[1];
+          let rad = d.Radius;
+          let color = d.Color;
+
+          context.fillStyle = color;
+          context.beginPath();
+          context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
+          context.fill();
+        });
+        context.restore();
+
+        console.log(transform);
         levels.each(function (delta) {
           const tiles = tile.zoomDelta(delta)(transform);
+          console.log(tiles);
 
           d3.select(this)
             .selectAll("image")
@@ -146,6 +209,15 @@
             .attr("width", tiles.scale)
             .attr("height", tiles.scale);
         });
+
+
+        // projection
+        //   .scale(transform.k / (2 * Math.PI))
+        //   .translate([transform.x, transform.y]);
+
+
+        // circles
+        //   .attr("transform", d => `translate(${projection([d.longitude, d.latitude])})`);
 
 
       }
