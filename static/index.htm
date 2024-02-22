@@ -29,6 +29,11 @@
       display: flex;
       flex-direction: column;
     }
+    .quanty{
+      text-align: center;
+      font-size: larger;
+      margin-bottom: 1em;
+    }
 
     .annotation {
       font-size: 12px;
@@ -50,6 +55,14 @@
 
     .serie:hover rect {
       fill-opacity: 1;
+    }
+    .label{
+      margin-bottom: 1em;
+      margin-left: 1em;
+    }
+    .center{
+      display: block;
+      margin: 0 auto;
     }
   </style>
 
@@ -74,12 +87,35 @@
     <svg id="primaryFuel" width="1200" height="500"></svg>
     <svg id="pfCountry" width="1200" height="500"></svg>
     <svg id="powerPlants" width="1200" height="500"></svg>
-
+  </div>
 
 
   </div>
-
+  <h1 style = "margin-left: .5em;">Max Capacity Finder</h1>
+  <div  class = "label">
+      <label for="continentSelect" >Select Continent:</label>
+      <select id="continentSelect" onchange="updateCountryOptions()">
+          <option value="">--Select Continent--</option>
+          <option value="Asia">Asia</option>
+          <option value="Europe">Europe</option>
+          <option value="Africa">Africa</option>
+          <option value="South America">South America</option>
+          <option value="North America">North America</option>
+          <option value="Oceania">Oceania</option>
+          <option value="Antarctica">Antarctica</option>
+      </select>
   </div>
+  <div  class = "label">
+      <label for="countrySelect">Select Country:</label>
+      <select id="countrySelect" onchange="showMaxCapacity()">
+          <option value="">--Select Country--</option>
+          <!-- Options for countries will be populated dynamically -->
+      </select>
+  </div>
+  <div id="maxCapacityResult" width = "400" height = "400" class = "quanty"></div>
+  <div id="houseM" width = "400" height = "400" class = "quanty"></div>
+  <svg id="homesDisplay" width="900" height="500" class = "center"></svg>
+
 
 
   <!-- <script>
@@ -605,28 +641,6 @@
         .rangeRound([height, 0]);
 
 
-      // colors = [
-      //   "#a6cee3",
-      //   "#ff7f00",
-      //   "#b2df8a",
-      //   "#33a02c",
-      //   "#fb9a99",
-      //   "#e31a1c",
-      //   "#fdbf6f",
-      //   "#1f78b4",
-      //   "#cab2d6",
-      //   "#6a3d9a",
-      //   "#b15928",
-      //   "#000000",
-      //   "#cccccc",
-      //   "#fdda24",
-      //   "#b15928"
-      // ]
-
-      // const color = d3.scaleOrdinal()
-      //   .domain(fuelTypes)
-      //   .range(colors)
-
 
       // Setup stack generator
       const stack = d3.stack()
@@ -656,12 +670,6 @@
         .attr("class", "axis")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
-      // .selectAll("text")
-      // .attr("y", 0)
-      // .attr("x", 9)
-      // // .attr("dy", ".35em")
-      // // .attr("transform", "rotate(90)")
-      // .style("text-anchor", "start");
 
       g.append("g")
         .attr("class", "axis")
@@ -674,29 +682,6 @@
         .attr("font-weight", "bold")
         .attr("text-anchor", "start")
         .text("Capacity (MW)");
-
-      // Append legend
-
-      // const legend = g.append("g")
-      //     .attr("font-family", "sans-serif")
-      //     .attr("font-size", 10)
-      //     .attr("text-anchor", "end")
-      //     .selectAll("g")
-      //     .data(fuelTypes.slice())
-      //     .join("g")
-      //     .attr("transform", (d, i) => `translate(0,${i * 20})`);
-
-      // legend.append("rect")
-      //     .attr("x", width - 19)
-      //     .attr("width", 19)
-      //     .attr("height", 19)
-      //     .attr("fill", color);
-
-      // legend.append("text")
-      //     .attr("x", width - 24)
-      //     .attr("y", 9.5)
-      //     .attr("dy", "0.32em")
-      //     .text(d => d);
 
 
 
@@ -751,26 +736,7 @@
         .nice()
         .rangeRound([height, 0]);
 
-      // colors = [
-      //   "#a6cee3",
-      //   "#ff7f00",
-      //   "#b2df8a",
-      //   "#33a02c",
-      //   "#fb9a99",
-      //   "#e31a1c",
-      //   "#fdbf6f",
-      //   "#1f78b4",
-      //   "#cab2d6",
-      //   "#6a3d9a",
-      //   "#b15928",
-      //   "#000000",
-      //   "#cccccc",
-      //   "#fdda24",
-      //   "#b15928"
-      // ]
-      // const color = d3.scaleOrdinal()
-      //   .domain(fuelTypes)
-      //   .range(colors);
+   
 
       // Append bars
       g.selectAll(".bar")
@@ -856,6 +822,129 @@
     }
 
     requestDataTopPlants();
+  </script>
+
+
+<!-- dont edit above here: -->
+  <script>
+     const requestTopCapCountry = async function () {
+      var data_cc = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
+      console.log(countries_continents);
+      // console.log(data_pm)
+      const countryToContinent = {};
+      countries_continents.forEach(entry => {
+        const country = entry.Entity.trim();
+        const continent = entry.Continent.trim();
+        countryToContinent[country] = continent;
+      });
+
+      return {countryToContinent, data_cc}
+    }
+    
+
+     // Function to update country options based on selected continent
+     const updateCountryOptions = async function () {
+    
+        let continentSelect = document.getElementById('continentSelect');
+        let selectedContinent = continentSelect.value;
+
+        let countrySelect = document.getElementById('countrySelect');
+        // Clear existing options
+        countrySelect.innerHTML = '<option value="">--Select Country--</option>';
+        countries_continents_full = await requestTopCapCountry();
+        countries_continents =  countries_continents_full['countryToContinent']
+        data_cmm = countries_continents_full['data_cc']
+        console.log(countries_continents)
+
+
+        // Get countries for the selected continent
+        const allCountries = new Set(data_cmm.map(d => d.country_long));
+        let countries = Object.keys(countries_continents).filter(country => countries_continents[country] === selectedContinent);
+        const filteredCountries = countries.filter(country => allCountries.has(country));
+
+        filteredCountries.forEach(country => {
+            let option = document.createElement('option');
+            option.value = country;
+            option.textContent = country;
+            countrySelect.appendChild(option);
+        });
+    }
+ 
+
+
+  let count = 0; // Initialize count outside the function
+
+const showMaxCapacity = async function () {
+    let countrySelect = document.getElementById('countrySelect');
+    let selectedCountry = countrySelect.value;
+
+    let data_cc_before = await requestTopCapCountry();
+    let data_cc = data_cc_before['data_cc'];
+    console.log(data_cc)
+
+    console.log(data_cc)
+    let maxCapacity = findMaxCapacityByCountry(data_cc, selectedCountry);
+    let homes_pM = maxCapacity / 33.33;
+    homes_pD = maxCapacity / 1.39;
+    homes_pD = Math.ceil(homes_pD);
+    homes_pM = Math.ceil(homes_pM);
+    const svgWidth = 900;
+    const iconWidth = 25;
+    const iconHeight = 25;
+
+    const maxIconsPerRow = Math.floor(svgWidth / iconWidth);
+    const totalIcons = homes_pM < 1 ? homes_pD : homes_pM;
+    
+
+    count = 0; // Reset count for each function call
+    const display = d3.select("#homesDisplay");
+    display.selectAll("image").remove(); // Clear existing SVG elements
+
+
+    let maxCapacityResult = document.getElementById('maxCapacityResult');
+
+    if (maxCapacity !== undefined) {
+        maxCapacityResult.textContent = `Max Capacity for ${selectedCountry}: ${maxCapacity} MW`;
+
+        let homesText = homes_pM < 1 ? `Amount homes this can power for a DAY: ${homes_pD}` : `Amount homes this can power for a MONTH: ${homes_pM}`;
+
+        houseM.textContent = homesText;
+
+        const display = d3.select("#homesDisplay");
+
+        for (let i = 0; i < totalIcons; i++) {
+            const row = Math.floor(i / maxIconsPerRow);
+            const col = i % maxIconsPerRow;
+            const x = col * iconWidth;
+            const y = row * iconHeight;
+            display.append("image")
+                .attr("xlink:href", "home2.png")
+                .attr("width", iconWidth)
+                .attr("height", iconHeight)
+                .attr("x", x)
+                .attr("y", y);
+        }
+    } else {
+        maxCapacityResult.textContent = `No data available for ${selectedCountry}`;
+    }
+}
+
+
+    // Function to find max capacity for a given country
+    function findMaxCapacityByCountry(data, country) {
+      console.log(data);
+      console.log(country)
+        let maxCapacity = 0;
+        data.forEach(entry => {
+            if (entry.country_long === country && entry.capacity_mw > maxCapacity) {
+                maxCapacity = entry.capacity_mw;
+            }
+        });
+        return maxCapacity;
+    }
+
+
   </script>
 </body>
 
