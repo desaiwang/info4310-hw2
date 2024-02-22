@@ -68,10 +68,13 @@
 
       </div> -->
     </div>
+
     <div id="container" style="width: 1000px; height: 600px;">
       <svg id="mapTile" width="1000" height="600"></svg>
     </div>
 
+    <div id="controlfilter" style="padding-top:10px;padding-bottom:10px">
+    </div>
 
     <div style="margin-top:100px">
       <svg id="primaryFuel" width="1200" height="500"></svg>
@@ -82,7 +85,6 @@
 
 
 
-  </div>
 
   </div>
   <script>
@@ -109,10 +111,18 @@
       .style("top", 0)
       .style("left", 0);
 
-    const labelName = interactiveArea.append("text").attr("x", 20).attr("y", 30).text("Hover over a power plant for more information.");
-    const labelFuel = interactiveArea.append("text").attr("x", 20).attr("y", 50).text("Bigger circle means larger production capacity.");
-    const labelCapacity = interactiveArea.append("text").attr("x", 20).attr("y", 70);
-    const labelCountry = interactiveArea.append("text").attr("x", 20).attr("y", 90);
+    const labelBase = interactiveArea.append("rect")
+      .attr("x", 10).attr("y", 10)
+      .attr("width", 350).attr("height", 50)
+      .attr("fill", "white")
+      .attr("opacity", "0.5");
+
+    const labels = interactiveArea.append("g");
+    const labelName = labels.append("text").attr("x", 20).attr("y", 30).text("Hover over a power plant for more information.");
+    const labelFuel = labels.append("text").attr("x", 20).attr("y", 50).text("Bigger circle means larger production capacity.");
+    const labelCapacity = labels.append("text").attr("x", 20).attr("y", 70);
+    const labelCountry = labels.append("text").attr("x", 20).attr("y", 90);
+
 
 
     const deltas = [-100, -4, -1, 0];
@@ -149,9 +159,8 @@
     const requestZoomableMapData = async () => {
 
       //load power plant data
-      const powerPlants = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+      const powerPlantsAll = await d3.csv("./global_power_plant_database.csv", d3.autoType);
       const countries = await d3.json("./countries.geojson");
-
       // console.log(powerPlants);
 
       // Mercator projection
@@ -160,18 +169,20 @@
       var path = d3.geoPath().projection(projection);
 
       // power capacity
-      const capacityExtent = d3.extent(powerPlants, d => d["capacity_mw"]);
+      const capacityExtent = d3.extent(powerPlantsAll, d => d["capacity_mw"]);
       const capacityScale = d3.scaleLog()
         .domain(capacityExtent)
         .range([1, 5]);
 
 
-      powerPlants.forEach(d => {
+      powerPlantsAll.forEach(d => {
         d.Position = projection([d.longitude, d.latitude]);
         d.Color = colorScale(d["primary_fuel"]);
         d.Radius = capacityScale(d["capacity_mw"]);
       })
 
+      //create a copy used for filtering
+      let powerPlants = powerPlantsAll;
 
       const tile = d3.tile()
         .extent([[0, 0], [width, height]])
@@ -208,6 +219,7 @@
 
         currTransform = transform;
 
+        console.log(transform);
         context.save();
         context.clearRect(0, 0, width, height);
         context.globalAlpha = 0.6;
@@ -248,7 +260,7 @@
 
 
       //setting up interactivity and annotations
-      const delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
+      let delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
       interactiveArea.on("mousemove", function (event) {
 
         let loc = d3.pointer(event);
@@ -286,6 +298,7 @@
       })
 
 
+      let setName = "";
       function mouseEntered(i) {
         let d = powerPlants[i];
 
@@ -300,21 +313,211 @@
           // .attr("transform", `scale(${currTransform.k}, ${currTransform.k})`)
           ;
 
-        labelName.text(`Name: ${d['name']}`);
+        setName = `Name: ${d['name']}`;
+        labelName.text(setName);
         labelFuel.text(`Fuel Type: ${d['primary_fuel']}`);
-        labelCapacity.text(`Capacity: ${d["capacity_mw"]} mW`);
+        labelCapacity.text(`Capacity: ${d3.format(".0f")(d["capacity_mw"])} mW`);
         labelCountry.text(`Location: ${d["country_long"]}`);
 
+        labelBase.attr("opacity", 0.5).attr("width", textWidth()).attr("height", 90);
+      }
+
+      context.font = "16px Lato Helvetica";
+      function textWidth() {
+        let width = context.measureText(setName).width + 50
+        return width > 260 ? width : 260;
       }
 
       function mouseExited() {
         d3.select("#highlight").remove();
+        labelBase.attr("opacity", 0);
         labelName.text("");
         labelFuel.text("");
         labelCapacity.text("");
         labelCountry.text("");
 
       }
+
+
+      //making dynamic filter, based on INFO 3300 notes
+
+      //filter:
+
+      var filters = {};
+
+      function pointPassesFilters(point) {
+
+        let stillPassed = true;
+
+        Object.values(filters).forEach(filterFunc => {
+
+          stillPassed = filterFunc(point) && stillPassed;
+
+        });
+
+        return stillPassed;
+
+      }
+
+      //update function after filter applied
+      function updateData() {
+
+        // Filter the points using the filter dictionary first
+        powerPlants = powerPlantsAll.filter(d => pointPassesFilters(d));
+        console.log(powerPlants);
+
+        delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1])
+
+        //updates drawings
+        zoomed(currTransform);
+      }
+
+      function makeSlider(container, label, attribute, sliderWidth, sliderHeight, maxLimit) {
+
+        // Get a raw array of values for this property
+        let values = powerPlantsAll.map(d => d[attribute]).sort(function (a, b) { return b - a }); //sorted for optimization
+
+        // Find min and max for some scales
+        let minMax = [0, maxLimit];
+        console.log(minMax);
+        let xScale = d3.scaleLinear().domain(minMax)
+          .range([10, sliderWidth - 20]); // padding here for ease
+
+        let xAxis = d3.axisBottom(xScale)
+          .tickFormat(function (d) {
+            // console.log("interval", d);
+            return (d == maxLimit) ? `> ${maxLimit}` : d;
+          })
+          ;
+
+        // Create some HTML elements
+        let wrapper = container.append("div").attr("class", "controls");
+        wrapper.append("div").text(label);
+        let canvas = wrapper.append("svg").attr("width", sliderWidth)
+          .attr("height", sliderHeight + 30)
+          .attr("attribute", attribute);
+        canvas.append("g").attr("transform", `translate(0,${sliderHeight})`)
+          .call(xAxis);
+        wrapper
+          .append("button")
+          .text(">500")
+          .on("click", function () {
+            let filterFunc = d => d[attribute] > 500;
+            filters[attribute] = filterFunc;
+
+            updateData();
+          })
+        wrapper
+          .append("button")
+          .text(">500")
+          .on("click", function () {
+            let filterFunc = d => d[attribute] > 500;
+            filters[attribute] = filterFunc;
+
+            updateData();
+          })
+        wrapper
+          .append("button")
+          .text(">1500")
+          .on("click", function () {
+            let filterFunc = d => d[attribute] > 1500;
+            filters[attribute] = filterFunc;
+
+            updateData();
+          })
+
+        wrapper
+          .append("button")
+          .text("top 20")
+          .on("click", function () {
+            console.log(values);
+            let cap = values[19];
+            console.log(cap);
+
+            let filterFunc = d => d[attribute] >= cap;
+            filters[attribute] = filterFunc;
+
+            updateData();
+          })
+
+
+        // Make an area chart
+        let areaLayer = canvas.append("g");
+
+        // generate histogram
+        let numBins = 20;
+        let histoGen = d3.histogram().domain(minMax)
+          .thresholds(numBins);
+        let counts = histoGen(values);
+
+        // dummy object at start of graph
+        counts.unshift({
+          x0: 0,
+          x1: counts[0].x0,
+          length: counts[0].length
+        });
+
+        let yScale = d3.scaleLinear().domain(d3.extent(counts, d => d.length))
+          .range([sliderHeight, 10]);
+
+        // Area generator is like a lineGen, but we give y0 and y1 to fill it in
+        let area = d3.area().x(d => xScale(d.x1))
+          .y0(yScale(0))
+          .y1(d => yScale(d.length))
+          .curve(d3.curveNatural);
+
+        // Adding the path works just like a line (the area generator just makes a filled region)
+        areaLayer.append("path").datum(counts)
+          .attr("class", "area")
+          .attr("fill", "#9dbbed")
+          .attr("d", area);
+
+
+        let filterFunc = d => true;
+        filters[attribute] = filterFunc;
+
+        var brush = d3.brushX().extent([[10, 0], // Upper left corner
+        [sliderWidth - 10, sliderHeight]])  // Lower right corner
+          .on("brush end", brushMoved);
+
+        function brushMoved(event) {
+
+
+          // Everything but clicking on brush area
+          if (event.selection !== null) {
+
+            // Run scales in reverse to get data values for the ends of the brush
+            //  If a scale turns data -> pixels, then scale.invert turns pixels -> data
+            let start = xScale.invert(event.selection[0]);
+            let end = xScale.invert(event.selection[1]);
+
+            if (end > maxLimit - 10) { end = Infinity; } //query all the power stations that are big.
+
+            // Overwrite old filter in our dictionary
+            // This filter now only returns True if the point's value is between start and end
+            let filterFunc = d => d[attribute] >= start && d[attribute] <= end;
+            filters[attribute] = filterFunc;
+
+            updateData();
+
+          }
+
+          // Clicking on brush area to empty it out
+          else {
+            // Selected nothing, let everything pass
+            let filterFunc = d => true;
+            filters[attribute] = filterFunc;
+
+            updateData();
+
+          }
+
+        }
+        canvas.append("g").attr("class", "brush").call(brush);
+      }
+
+      let controls = d3.select("#controlfilter");
+      makeSlider(controls, "Capaity (mW)", "capacity_mw", 670, 50, 160);
 
     }
 
