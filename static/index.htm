@@ -102,7 +102,17 @@
       .style("left", 0);
     const context = canvas.node().getContext('2d');
 
-    const interactiveArea = container.append("svg").attr("width", 1000).attr("height", 600);
+    const interactiveArea = container.append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .style("position", "absolute")
+      .style("top", 0)
+      .style("left", 0);
+
+    const labelName = interactiveArea.append("text").attr("x", 20).attr("y", 30).text("Hover over a power plant for more information.");
+    const labelFuel = interactiveArea.append("text").attr("x", 20).attr("y", 50).text("Bigger circle means larger production capacity.");
+    const labelCapacity = interactiveArea.append("text").attr("x", 20).attr("y", 70);
+    const labelCountry = interactiveArea.append("text").attr("x", 20).attr("y", 90);
 
 
     const deltas = [-100, -4, -1, 0];
@@ -110,7 +120,32 @@
     let url = (x, y, z) =>
       `https://api.mapbox.com/styles/v1/desaiwang/clswj0z9q00oq01p4ao6scxlh/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
 
-    //alt monochrome style key: ckttxzrvq0s4i18l4he5vtltt
+
+    //establish color mapping for fuel types
+    const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+
+    colors = [
+      "#b2df8a",
+      "#a6cee3",
+      "#1f78b4",
+      "#33a02c",
+      "#ff7f00",
+      "#fb9a99",
+      "#e31a1c",
+      "#fdbf6f",
+      "#cab2d6",
+      "#6a3d9a",
+      "#b15928",
+      "#000000",
+      "#cccccc",
+      "#fdda24",
+      "#b15928"
+    ];
+
+    const colorScale = d3.scaleOrdinal()
+      .domain(primaryFuelTypes)
+      .range(colors);
+
     const requestZoomableMapData = async () => {
 
       //load power plant data
@@ -133,6 +168,7 @@
 
       powerPlants.forEach(d => {
         d.Position = projection([d.longitude, d.latitude]);
+        d.Color = colorScale(d["primary_fuel"]);
         d.Radius = capacityScale(d["capacity_mw"]);
       })
 
@@ -149,34 +185,32 @@
         .join("g")
         .style("opacity", null); //set to 0.3 to see low resolution files
 
-      // let circles = mapArea.selectAll("circle").data(powerPlants)
-      //   .join("circle")
-      //   .attr("cx", d => d.Position[0])
-      //   .attr("cy", d => d.Position[1])
-      //   .attr("r", d => d.Radius);
-
-
-
       var zoom = d3.zoom()
         .scaleExtent([1 << 10, 1 << 19])
         .on("zoom", ({ transform }) => zoomed(transform));
 
-      container.on("mouseover", (event) => console.log(event));
 
-      container
+      let initialTransform = d3.zoomIdentity
+        .translate(width / 2, height / 2 + 100)
+        .scale(1 << 10);
+      let currTransform = initialTransform;
+      let currentTarget = -1;
+
+      interactiveArea
         .call(zoom)
-        .call(zoom.transform, d3.zoomIdentity
-          .translate(width / 2, height / 2 + 100)
-          .scale(1 << 10)
-        )
+        .call(zoom.transform, initialTransform)
         .on("mousewheel.zoom", null)
         .on("DOMMouseScroll.zoom", null); //disable scrolling while zooming
 
 
       function zoomed(transform) {
+        if (currentTarget > 0) { mouseExited(); } //disable highlighting while zooming
+
+        currTransform = transform;
 
         context.save();
         context.clearRect(0, 0, width, height);
+        context.globalAlpha = 0.6;
         context.translate(transform.x, transform.y);
         context.scale(transform.k, transform.k);
         context.beginPath();
@@ -194,10 +228,8 @@
         });
         context.restore();
 
-        console.log(transform);
         levels.each(function (delta) {
           const tiles = tile.zoomDelta(delta)(transform);
-          console.log(tiles);
 
           d3.select(this)
             .selectAll("image")
@@ -210,17 +242,80 @@
             .attr("height", tiles.scale);
         });
 
-
-        // projection
-        //   .scale(transform.k / (2 * Math.PI))
-        //   .translate([transform.x, transform.y]);
-
-
-        // circles
-        //   .attr("transform", d => `translate(${projection([d.longitude, d.latitude])})`);
-
+        if (currentTarget > 0) { mouseEntered(currentTarget); }
 
       }
+
+
+      //setting up interactivity and annotations
+      const delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
+      interactiveArea.on("mousemove", function (event) {
+
+        let loc = d3.pointer(event);
+
+        loc_x = (loc[0] - currTransform.x) / currTransform.k;
+        loc_y = (loc[1] - currTransform.y) / currTransform.k;
+
+        // console.log(currTransform)
+        // console.log(loc[0], loc[1]);
+        // console.log(loc_x, loc_y);
+
+        let index;
+        if (currentTarget === -1) {
+          // Does a sweep of triangles, which should be O(sqrt(N)) in most cases
+          index = delaunay.find(loc_x, loc_y);   // returns index of closest point
+        }
+        else {
+          // With a known point index that's nearby, you can speed up the lookups dramatically
+          index = delaunay.find(loc_x, loc_y, currentTarget)
+        }
+        // console.log(loc, index);
+
+        if (index !== currentTarget) {
+          // Make our "mouseover" function
+          console.log("mouseover");
+          currentTarget = index;
+          mouseExited();
+          mouseEntered(index, loc[0], loc[1]);
+        }
+      });
+      // Also trigger "mouseout" when leaving interactive area
+      interactiveArea.on("mouseout", () => {
+        currentTarget = -1;
+        mouseExited();
+      })
+
+
+      function mouseEntered(i) {
+        let d = powerPlants[i];
+
+        interactiveArea.append("circle")
+          .attr("id", "highlight")
+          .attr("cx", d.Position[0] * currTransform.k + currTransform.x)
+          .attr("cy", d.Position[1] * currTransform.k + currTransform.y)
+          .attr("r", 5)
+          .attr("stroke", "black")
+          .attr("fill", "none")
+          // .attr("transform", `translate(${currTransform.x}, ${currTransform.y})`)
+          // .attr("transform", `scale(${currTransform.k}, ${currTransform.k})`)
+          ;
+
+        labelName.text(`Name: ${d['name']}`);
+        labelFuel.text(`Fuel Type: ${d['primary_fuel']}`);
+        labelCapacity.text(`Capacity: ${d["capacity_mw"]} mW`);
+        labelCountry.text(`Location: ${d["country_long"]}`);
+
+      }
+
+      function mouseExited() {
+        d3.select("#highlight").remove();
+        labelName.text("");
+        labelFuel.text("");
+        labelCapacity.text("");
+        labelCountry.text("");
+
+      }
+
     }
 
     requestZoomableMapData();
