@@ -383,7 +383,7 @@
           setName = `Name: ${d['name']}`;
           labelName.text(setName);
           labelFuel.text(`Fuel Type: ${d['primary_fuel']}`);
-          labelCapacity.text(`Capacity: ${d3.format(".0f")(d["capacity_mw"])} mW`);
+          labelCapacity.text(`Capacity: ${d3.format(".0f")(d["capacity_mw"])} MW`);
           labelCountry.text(`Location: ${d["country_long"]}`);
 
           labelBase.attr("opacity", 0.5).attr("width", textWidth()).attr("height", 90);
@@ -598,7 +598,7 @@
         }
 
         let controls = d3.select("#controlfilter");
-        makeSlider(controls, "Capacity (mW)", "capacity_mw", 670, 50, 160);
+        makeSlider(controls, "Capacity (MW)", "capacity_mw", 670, 50, 160);
 
         let energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
 
@@ -1332,7 +1332,7 @@
         let maxCapacityResult = document.getElementById('maxCapacityResult');
 
         if (maxCapacity !== undefined) {
-          maxCapacityResult.textContent = `Max Power Plant Capacity for ${selectedCountry}: ${maxCapacity} mW`;
+          maxCapacityResult.textContent = `Max Power Plant Capacity for ${selectedCountry}: ${maxCapacity} MW`;
 
           let homesText = `# Homes Powered: ${d3.format(",.0f")(homes)}`;
 
