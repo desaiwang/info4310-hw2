@@ -65,29 +65,34 @@
       (dw584)</h5>
 
     <div>
-      <div id="container" style="width: 1000px; height: 600px;">
-        <svg id="mapTile" width="1000" height="600"></svg>
+      <div class="row">
+        <div>
+          <div id="container" style="width: 1000px; height: 600px;">
+            <svg id="mapTile" width="1000" height="600"></svg>
+          </div>
+          <div id="controlfilter"></div>
+        </div>
+
+        <div>
+          <svg id="legendGlobalMap" width="200" height="335" style="margin-top:10px; margin-left:10px"></svg>
+          <div id="filterButtons"
+            style="display:flex; flex-direction:column; flex-wrap: wrap; justify-content: flex-start; margin-top:10px; margin-left:10px">
+          </div>
+        </div>
+
       </div>
 
-      <div id="controlfilter" class="test" style="padding-top:10px;padding-bottom:10px">
-      </div>
+
+
 
     </div>
     <div id="legendTest" width="1000" height="600"></div>
-    <svg id="legendSvg" width="1000" height="600"></svg>
-
-
-
 
     <div style="margin-top:100px">
       <svg id="primaryFuel" width="1200" height="500"></svg>
       <svg id="pfCountry" width="1200" height="500"></svg>
       <svg id="powerPlants" width="1200" height="500"></svg>
     </div>
-
-
-
-
 
   </div>
   <script>
@@ -161,118 +166,6 @@
       .domain(primaryFuelTypes)
       .range(colors);
 
-    // const legend = d3.select("#legendTest").append("g")
-    const legend = d3.select("#legendSvg").append("g")
-    // .attr("transform", `translate(${width + 75},20)`)
-
-    // <input type="checkbox" id="myCheckbox" style="accent-color:red"> Only Even</input>
-
-    // testtt = legend.selectAll("input")
-    //   .data(primaryFuelTypes)
-    //   .enter()
-    //   .append("label")
-    //   .attr('for', function (d, i) { return 'a' + i; })
-    //   .text(d => d)
-    //   .append("input")
-    //   .attr("type", "checkbox")
-    //   .attr("checked", true)
-    //   .attr("name", function (d, i) { return 'a' + i; })
-    //   // .attr("y", (d, i) => i * 20)
-    //   // .text(d => d)
-    //   // .attr("width", 10)
-    //   // .attr("height", 10)
-    //   .style("accent-color", d => colorScale(d))
-
-    // testtt = legend.selectAll("input")
-    //   .data(primaryFuelTypes)
-    //   .enter()
-    //   .append("label")
-    //   .attr('for', function (d, i) { return 'a' + i; })
-    //   .each(function (d, i) {
-    //     d3.select(this)
-    //       .append("input")
-    //       .attr("type", "checkbox")
-    //       .attr("checked", true)
-    //       .attr("name", function (d, i) { return 'a' + i; });
-
-    //     d3.select(this)
-    //       .append("span")
-    //       .text(d => d);
-    //   })
-    //   .style("accent-color", d => colorScale(d));
-
-    // legend.selectAll("rect")
-    //   .data(primaryFuelTypes)
-    //   .join("rect")
-    //   .attr("y", (d, i) => i * 20)
-    //   .attr("width", 10)
-    //   .attr("height", 10)
-    //   .attr("fill", d => colorScale(d))
-    //   .attr("stroke", "#bbb")
-    //   .attr("stroke-width", 2)
-    //   .attr("index", (d, i) => i)
-    //   .on("mouseover", function () {
-    //     d3.select(this).attr("opacity", 0.5);
-    //   })
-    //   .on("mouseout", function () {
-    //     d3.select(this).attr("opacity", 1);
-    //   })
-    //   .on("click", function (d, i) {
-
-    //     var clicked = d3.select(this);
-    //     // console.log(index)
-    //     d3.select(this).attr("clicked", clicked);
-
-    //     console.log(d3.select(this));
-    //     console.log(d3.select(this).data());
-
-    //     if (clicked === true) {
-    //       d3.select(this).attr("fill", d => colorScale(d));
-    //     } else {
-    //       d3.select(this).attr("fill", "white");
-    //     }
-    //   });
-
-    legend.selectAll("rect")
-      .data(primaryFuelTypes)
-      .join("rect")
-      .attr("y", (d, i) => i * 20)
-      .attr("width", 10)
-      .attr("height", 10)
-      .attr("fill", d => colorScale(d))
-      .attr("stroke", "#bbb")
-      .attr("stroke-width", 2)
-      .attr("clicked", "true")
-      .on("mouseover", function () {
-        d3.select(this).attr("opacity", 0.5);
-      })
-      .on("mouseout", function () {
-        d3.select(this).attr("opacity", 1);
-      })
-      .on("click", function (d, i) {
-
-        var clicked = d3.select(this).attr("clicked");
-
-        if (clicked === "true") {
-
-          d3.select(this)
-            .attr("fill", "white")
-            .attr("clicked", "false");
-        } else {
-
-          d3.select(this)
-            .attr("fill", d => colorScale(d))
-            .attr("clicked", "true");
-        }
-      });
-
-    legend.selectAll("text")
-      .data(primaryFuelTypes)
-      .join("text")
-      .attr("y", (d, i) => i * 20 + 9)
-      .attr("x", 12)
-      .text(d => d)
-      .attr("fill", "black");
 
     const requestZoomableMapData = async () => {
 
@@ -497,7 +390,7 @@
 
         // Find min and max for some scales
         let minMax = [0, maxLimit];
-        console.log(minMax);
+
         let xScale = d3.scaleLinear().domain(minMax)
           .range([10, sliderWidth - 20]); // padding here for ease
 
@@ -509,7 +402,7 @@
           ;
 
         // Create some HTML elements
-        let wrapper = container.append("div").attr("class", "controls");
+        let wrapper = container.append("div").attr("class", "controls").style("margin-top", "10px");
         wrapper.append("div").text(label);
 
         let rowwrapper = wrapper.append("div")
@@ -644,8 +537,6 @@
 
         }
 
-
-
         let brushRegion = canvas.append("g").attr("class", "brush")
         brushRegion.call(brush);
       }
@@ -653,7 +544,149 @@
       let controls = d3.select("#controlfilter");
       makeSlider(controls, "Capacity (mW)", "capacity_mw", 670, 50, 160);
 
+      let energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+
+      // populate legend
+      const legendGlobalMap = d3.select("#legendGlobalMap").append("g")
+
+      d3.select("#legendGlobalMap").append("g").attr("id", "test").append("text").attr("x", 5).attr("y", 13).text("Primary Fuel Type");
+
+      legendGlobalMap.selectAll("rect")
+        .data(primaryFuelTypes)
+        .join("rect")
+        .attr("x", 5)
+        .attr("y", (d, i) => 25 + i * 20)
+        .attr("width", 10)
+        .attr("height", 10)
+        .attr("fill", d => colorScale(d))
+        .attr("stroke", "#bbb")
+        .attr("stroke-width", 1)
+        .attr("clicked", "true")
+        .style("border-radius", "1px")
+        .on("mouseover", function () {
+          d3.select(this).attr("opacity", 0.5);
+        })
+        .on("mouseout", function () {
+          d3.select(this).attr("opacity", 1);
+        })
+        .on("click", function (d, i) {
+
+          var clicked = d3.select(this).attr("clicked");
+
+          if (clicked === "true") {
+
+            d3.select(this)
+              .attr("fill", "white")
+              .attr("clicked", "false");
+
+            energyTypes = energyTypes.filter(name => name !== d3.select(this).datum())
+
+            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+            filters["primary_fuel"] = filterFunc;
+
+            updateData();
+          } else {
+
+            d3.select(this)
+              .attr("fill", d => colorScale(d))
+              .attr("clicked", "true");
+
+            energyTypes.push(d3.select(this).datum());
+
+            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+            filters["primary_fuel"] = filterFunc;
+
+            updateData();
+          }
+        });
+
+      legendGlobalMap.selectAll("text")
+        .data(primaryFuelTypes)
+        .join("text")
+        .attr("y", (d, i) => i * 20 + 35)
+        .attr("x", 20)
+        .text(d => d)
+        .attr("fill", "black")
+        .style("user-select", "none");
+
+
+      let primaryFuelButtons = d3.select("#filterButtons")
+      //.append("g").style("margin-left", 5);
+
+      primaryFuelButtons.append("button")
+        .text("Renewable Energy Plants")
+        .on("click", function () {
+
+          energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass']
+          // energyTypes =['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
+
+          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+          filters["primary_fuel"] = filterFunc;
+
+          updateData();
+
+          //updates selections for checkboxes
+          legendGlobalMap.selectAll("rect")
+            .attr("fill", function (d) {
+              if (energyTypes.includes(d)) { return colorScale(d) }
+              else { return "white" }
+            })
+            .attr("clicked", function (d) {
+              if (energyTypes.includes(d)) { return "true" }
+              else { return "false" }
+            })
+        });
+
+      primaryFuelButtons.append("button")
+        .text("Non-Renewable Energy Plants")
+        .style("margin-top", "5")
+        .on("click", function () {
+
+          energyTypes = ['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
+
+          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+          filters["primary_fuel"] = filterFunc;
+
+          updateData();
+
+          //updates selections for checkboxes
+          legendGlobalMap.selectAll("rect")
+            .attr("fill", function (d) {
+              if (energyTypes.includes(d)) { return colorScale(d) }
+              else { return "white" }
+            })
+            .attr("clicked", function (d) {
+              if (energyTypes.includes(d)) { return "true" }
+              else { return "false" }
+            })
+        });
+
+      primaryFuelButtons.append("button")
+        .text("Clear Filters on Fuel Type")
+        .style("margin-top", "5")
+        .on("click", function () {
+
+          energyTypes = primaryFuelTypes;
+
+          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+          filters["primary_fuel"] = filterFunc;
+
+          updateData();
+
+          //updates selections for checkboxes
+          legendGlobalMap.selectAll("rect")
+            .attr("fill", function (d) {
+              if (energyTypes.includes(d)) { return colorScale(d) }
+              else { return "white" }
+            })
+            .attr("clicked", function (d) {
+              if (energyTypes.includes(d)) { return "true" }
+              else { return "false" }
+            })
+        });
+
     }
+
 
     requestZoomableMapData();
 
