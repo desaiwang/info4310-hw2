@@ -109,10 +109,12 @@
         <div>
           <div id="maxCapacityResult" width="400" height="400" class="quanty" style="margin-bottom: 0.5em;"></div>
           <div id="houseM" width="400" height="400" class="quanty" style="margin-bottom: 1em;"></div>
-          <svg id="homesDisplay" width="900" height="500" class="center"></svg>
+          <svg id="homesDisplay" width="900" height="500" class="center">
+            <text id="helpText" x="50%" y="50%" text-anchor="middle"></text>
+          </svg>
         </div>
 
-        <div id="dropdownSelect" style="display:flex; flex-direction:row; margin-top:10px">
+        <div id="dropdownSelect" style="display:flex; flex-direction:row; margin-top:10px; justify-content: center;">
           <div class="label">
             <label for="continentSelect">Continent:</label>
             <select id="continentSelect" onchange="updateCountryOptions()">
@@ -1261,7 +1263,7 @@
       const requestTopCapCountry = async function () {
         var data_cc = await d3.csv("./global_power_plant_database.csv", d3.autoType);
         var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
-        console.log(countries_continents);
+        // console.log(countries_continents);
         // console.log(data_pm)
         const countryToContinent = {};
         countries_continents.forEach(entry => {
@@ -1286,7 +1288,7 @@
         countries_continents_full = await requestTopCapCountry();
         countries_continents = countries_continents_full['countryToContinent']
         data_cmm = countries_continents_full['data_cc']
-        console.log(countries_continents)
+        // console.log(countries_continents)
 
 
         // Get countries for the selected continent
@@ -1303,7 +1305,15 @@
       }
 
 
+      //helper text that's only available when nothing is selected yet
+      d3.select("#helpText")
+        .style("color", "#eee")
+        .style("opacity", 0.5)
+        .style("font-size", "24px")
+        .text("Select a country from the drop down below.")
+        ;
 
+      // console.log(d3.select())
       let count = 0; // Initialize count outside the function
 
       const showMaxCapacity = async function () {
@@ -1312,7 +1322,7 @@
 
         let data_cc_before = await requestTopCapCountry();
         let data_cc = data_cc_before['data_cc'];
-        console.log(data_cc)
+        // console.log(data_cc)
 
         let maxCapacity = findMaxCapacityByCountry(data_cc, selectedCountry);
         let homes = Math.ceil(maxCapacity * 650); //1mW powers anywhere between 400-900 homes
@@ -1327,6 +1337,7 @@
         count = 0; // Reset count for each function call
         const display = d3.select("#homesDisplay");
         display.selectAll("image").remove(); // Clear existing SVG elements
+        display.selectAll("text").remove();
 
 
         let maxCapacityResult = document.getElementById('maxCapacityResult');
