@@ -12,7 +12,7 @@
     .countries {
       stroke: white;
       stroke-width: 1px;
-      fill: #bbb;
+      fill: #e8e8e8;
     }
 
     .row {
@@ -183,14 +183,18 @@
 
 
 
+
       const deltas = [-100, -4, -1, 0];
+
 
       let url = (x, y, z) =>
         `https://api.mapbox.com/styles/v1/desaiwang/clswj0z9q00oq01p4ao6scxlh/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
 
 
+
       //establish color mapping for fuel types
       const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+
 
       const primaryFuelFilter = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 
@@ -212,12 +216,14 @@
         "#b15928"
       ];
 
+
       const colorScale = d3.scaleOrdinal()
         .domain(primaryFuelTypes)
         .range(colors);
 
 
       const requestZoomableMapData = async () => {
+
 
         //load power plant data
         const powerPlantsAll = await d3.csv("./global_power_plant_database.csv", d3.autoType);
