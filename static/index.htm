@@ -21,7 +21,6 @@
       justify-content: center
     }
 
-
     .column {
       display: flex;
       flex-direction: column;
@@ -33,14 +32,6 @@
       margin-left: 40px
     }
 
-    .gridlines line {
-      stroke: #bbb;
-    }
-
-    .gridlines .domain {
-      stroke: none;
-    }
-
     .serie rect {
       fill-opacity: 0.8;
     }
@@ -49,20 +40,31 @@
       fill-opacity: 1;
     }
 
-    /* .test {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-    } */
+    #continentButton.clicked,
+    #topCountryButton.clicked,
+    #topPlantButton.clicked {
+      background-color: #9dbbed;
+    }
+
+    #continentButton,
+    #topCountryButton,
+    #topPlantButton {
+      background-color: #eee;
+      color: black;
+      border: 1px solid #838383;
+      border-radius: 2px;
+    }
   </style>
 
 </head>
 
 <body>
   <div style="margin-top:30px">
-    <h2 style="text-align: center"> Exploring Power Plants Around the World</h2>
-    <h5 style="text-align: center; margin-top: -65px; margin-bottom: 50px"> Natalia Jordan (naj46) and Desai Wang
-      (dw584)</h5>
+    <div id="header" style="margin-left:-100px">
+      <h2 style="text-align: center"> Exploring Power Plants Around the World</h2>
+      <h5 style="text-align: center; margin-top: -65px; margin-bottom: 50px"> Natalia Jordan (naj46) and Desai Wang
+        (dw584)</h5>
+    </div>
 
     <div>
       <div class="row">
@@ -72,7 +74,6 @@
           </div>
           <div id="controlfilter"></div>
         </div>
-
         <div>
           <svg id="legendGlobalMap" width="200" height="335" style="margin-top:10px; margin-left:10px"></svg>
           <div id="filterButtons"
@@ -81,616 +82,1122 @@
         </div>
 
       </div>
-
-
-
-
-    </div>
-    <div id="legendTest" width="1000" height="600"></div>
-
-    <div style="margin-top:100px">
-      <svg id="primaryFuel" width="1200" height="500"></svg>
-      <svg id="pfCountry" width="1200" height="500"></svg>
-      <svg id="powerPlants" width="1200" height="500"></svg>
     </div>
 
-  </div>
-  <script>
-
-    const container = d3.select("#container").style("position", "relative");
-
-    const mapArea = d3.select("#mapTile");
-
-    const width = mapArea.attr("width");
-    const height = mapArea.attr("height");
-
-    const canvas = container.append("canvas")
-      .attr("width", width)
-      .attr("height", height)
-      .style("position", "absolute")
-      .style("top", 0)
-      .style("left", 0);
-    const context = canvas.node().getContext('2d');
-
-    const interactiveArea = container.append("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .style("position", "absolute")
-      .style("top", 0)
-      .style("left", 0);
-
-    const labelBase = interactiveArea.append("rect")
-      .attr("x", 10).attr("y", 10)
-      .attr("width", 350).attr("height", 50)
-      .attr("fill", "white")
-      .attr("opacity", "0.5");
-
-    const labels = interactiveArea.append("g");
-    const labelName = labels.append("text").attr("x", 20).attr("y", 30).text("Hover over a power plant for more information.");
-    const labelFuel = labels.append("text").attr("x", 20).attr("y", 50).text("Bigger circle means larger production capacity.");
-    const labelCapacity = labels.append("text").attr("x", 20).attr("y", 70);
-    const labelCountry = labels.append("text").attr("x", 20).attr("y", 90);
 
 
+    <div style="display:flex; flex-direction:column; justify-content: center; align-items: center; margin-left:-100px">
+      <h3 style="text-align: center; margin-top:100px; margin-bottom:20px"> Visualize Data in Histograms</h3>
+      <svg id="histograms" width="1200" height="500" style="margin-bottom:10px"></svg>
+      <div id="mapSelectionButtons" style="margin-bottom:50px"></div>
+    </div>
 
-    const deltas = [-100, -4, -1, 0];
+    <script>
 
-    let url = (x, y, z) =>
-      `https://api.mapbox.com/styles/v1/desaiwang/clswj0z9q00oq01p4ao6scxlh/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
+      const container = d3.select("#container").style("position", "relative");
 
+      const mapArea = d3.select("#mapTile");
 
-    //establish color mapping for fuel types
-    const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+      const width = mapArea.attr("width");
+      const height = mapArea.attr("height");
 
-    const primaryFuelFilter = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+      const canvas = container.append("canvas")
+        .attr("width", width)
+        .attr("height", height)
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("left", 0);
+      const context = canvas.node().getContext('2d');
 
-    colors = [
-      "#b2df8a",
-      "#a6cee3",
-      "#1f78b4",
-      "#33a02c",
-      "#ff7f00",
-      "#fb9a99",
-      "#e31a1c",
-      "#fdbf6f",
-      "#cab2d6",
-      "#6a3d9a",
-      "#b15928",
-      "#000000",
-      "#cccccc",
-      "#fdda24",
-      "#b15928"
-    ];
+      const interactiveArea = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("left", 0);
 
-    const colorScale = d3.scaleOrdinal()
-      .domain(primaryFuelTypes)
-      .range(colors);
+      const labelBase = interactiveArea.append("rect")
+        .attr("x", 10).attr("y", 10)
+        .attr("width", 350).attr("height", 50)
+        .attr("fill", "white")
+        .attr("opacity", "0.5");
 
-
-    const requestZoomableMapData = async () => {
-
-      //load power plant data
-      const powerPlantsAll = await d3.csv("./global_power_plant_database.csv", d3.autoType);
-      const countries = await d3.json("./countries.geojson");
-      // console.log(powerPlants);
-
-      // Mercator projection
-      var projection = d3.geoMercator().scale(1 / (2 * Math.PI)).translate([0, 0]);
-      //d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
-      var path = d3.geoPath().projection(projection);
-
-      // power capacity
-      const capacityExtent = d3.extent(powerPlantsAll, d => d["capacity_mw"]);
-      const capacityScale = d3.scaleLog()
-        .domain(capacityExtent)
-        .range([1, 5]);
+      const labels = interactiveArea.append("g");
+      const labelName = labels.append("text").attr("x", 20).attr("y", 30).text("Hover over a power plant for more information.");
+      const labelFuel = labels.append("text").attr("x", 20).attr("y", 50).text("Bigger circle means larger production capacity.");
+      const labelCapacity = labels.append("text").attr("x", 20).attr("y", 70);
+      const labelCountry = labels.append("text").attr("x", 20).attr("y", 90);
 
 
-      powerPlantsAll.forEach(d => {
-        d.Position = projection([d.longitude, d.latitude]);
-        d.Color = colorScale(d["primary_fuel"]);
-        d.Radius = capacityScale(d["capacity_mw"]);
-      })
 
-      //create a copy used for filtering
-      let powerPlants = powerPlantsAll;
+      const deltas = [-100, -4, -1, 0];
 
-      const tile = d3.tile()
-        .extent([[0, 0], [width, height]])
-        .tileSize(512)
-        .clampX(false);
-
-      const levels = mapArea.append("g")
-        .attr("pointer-events", "none")
-        .selectAll("g")
-        .data(deltas)
-        .join("g")
-        .style("opacity", null); //set to 0.3 to see low resolution files
-
-      var zoom = d3.zoom()
-        .scaleExtent([1 << 10, 1 << 19])
-        .on("zoom", ({ transform }) => zoomed(transform));
+      let url = (x, y, z) =>
+        `https://api.mapbox.com/styles/v1/desaiwang/clswj0z9q00oq01p4ao6scxlh/tiles/${z}/${x}/${y}${devicePixelRatio > 1 ? "@2x" : ""}?access_token=pk.eyJ1IjoiZGVzYWl3YW5nIiwiYSI6ImNrc2puMHIyaTJmbWsydG41bmljMWExdjIifQ.A4w7M2K7sSIN-uLuXarl_w`
 
 
-      let initialTransform = d3.zoomIdentity
-        .translate(width / 2, height / 2 + 100)
-        .scale(1 << 10);
-      let currTransform = initialTransform;
-      let currentTarget = -1;
+      //establish color mapping for fuel types
+      const primaryFuelTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
 
-      interactiveArea
-        .call(zoom)
-        .call(zoom.transform, initialTransform)
-        .on("mousewheel.zoom", null)
-        .on("DOMMouseScroll.zoom", null); //disable scrolling while zooming
+      const primaryFuelFilter = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+
+      const colors = [
+        "#b2df8a",
+        "#a6cee3",
+        "#1f78b4",
+        "#33a02c",
+        "#ff7f00",
+        "#fb9a99",
+        "#e31a1c",
+        "#fdbf6f",
+        "#cab2d6",
+        "#6a3d9a",
+        "#b15928",
+        "#000000",
+        "#cccccc",
+        "#fdda24",
+        "#b15928"
+      ];
+
+      const colorScale = d3.scaleOrdinal()
+        .domain(primaryFuelTypes)
+        .range(colors);
 
 
-      function zoomed(transform) {
-        if (currentTarget > 0) { mouseExited(); } //disable highlighting while zooming
+      const requestZoomableMapData = async () => {
 
-        currTransform = transform;
+        //load power plant data
+        const powerPlantsAll = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+        const countries = await d3.json("./countries.geojson");
+        // console.log(powerPlants);
 
-        console.log(transform);
-        context.save();
-        context.clearRect(0, 0, width, height);
-        context.globalAlpha = 0.6;
-        context.translate(transform.x, transform.y);
-        context.scale(transform.k, transform.k);
-        context.beginPath();
+        // Mercator projection
+        var projection = d3.geoMercator().scale(1 / (2 * Math.PI)).translate([0, 0]);
+        //d3.geoMercator().fitSize([mapWidth, mapHeight], countries);
+        var path = d3.geoPath().projection(projection);
 
-        powerPlants.forEach((d, i) => {
-          let x = d.Position[0];
-          let y = d.Position[1];
-          let rad = d.Radius;
-          let color = d.Color;
+        // power capacity
+        const capacityExtent = d3.extent(powerPlantsAll, d => d["capacity_mw"]);
+        const capacityScale = d3.scaleLog()
+          .domain(capacityExtent)
+          .range([1, 5]);
 
-          context.fillStyle = color;
+
+        powerPlantsAll.forEach(d => {
+          d.Position = projection([d.longitude, d.latitude]);
+          d.Color = colorScale(d["primary_fuel"]);
+          d.Radius = capacityScale(d["capacity_mw"]);
+        })
+
+        //create a copy used for filtering
+        let powerPlants = powerPlantsAll;
+
+        const tile = d3.tile()
+          .extent([[0, 0], [width, height]])
+          .tileSize(512)
+          .clampX(false);
+
+        const levels = mapArea.append("g")
+          .attr("pointer-events", "none")
+          .selectAll("g")
+          .data(deltas)
+          .join("g")
+          .style("opacity", null); //set to 0.3 to see low resolution files
+
+        var zoom = d3.zoom()
+          .scaleExtent([1 << 10, 1 << 19])
+          .on("zoom", ({ transform }) => zoomed(transform));
+
+
+        let initialTransform = d3.zoomIdentity
+          .translate(width / 2, height / 2 + 100)
+          .scale(1 << 10);
+        let currTransform = initialTransform;
+        let currentTarget = -1;
+
+        interactiveArea
+          .call(zoom)
+          .call(zoom.transform, initialTransform)
+          .on("mousewheel.zoom", null)
+          .on("DOMMouseScroll.zoom", null); //disable scrolling while zooming
+
+
+        function zoomed(transform) {
+          if (currentTarget > 0) { mouseExited(); } //disable highlighting while zooming
+
+          currTransform = transform;
+
+          console.log(transform);
+          context.save();
+          context.clearRect(0, 0, width, height);
+          context.globalAlpha = 0.6;
+          context.translate(transform.x, transform.y);
+          context.scale(transform.k, transform.k);
           context.beginPath();
-          context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
-          context.fill();
-        });
-        context.restore();
 
-        levels.each(function (delta) {
-          const tiles = tile.zoomDelta(delta)(transform);
+          powerPlants.forEach((d, i) => {
+            let x = d.Position[0];
+            let y = d.Position[1];
+            let rad = d.Radius;
+            let color = d.Color;
 
-          d3.select(this)
-            .selectAll("image")
-            .data(tiles, d => d)
-            .join("image")
-            .attr("xlink:href", d => url(...d3.tileWrap(d)))
-            .attr("x", ([x]) => (x + tiles.translate[0]) * tiles.scale)
-            .attr("y", ([, y]) => (y + tiles.translate[1]) * tiles.scale)
-            .attr("width", tiles.scale)
-            .attr("height", tiles.scale);
-        });
+            context.fillStyle = color;
+            context.beginPath();
+            context.arc(x, y, rad / transform.k, 0, 2 * Math.PI);
+            context.fill();
+          });
+          context.restore();
 
-        if (currentTarget > 0) { mouseEntered(currentTarget); }
+          levels.each(function (delta) {
+            const tiles = tile.zoomDelta(delta)(transform);
 
-      }
+            d3.select(this)
+              .selectAll("image")
+              .data(tiles, d => d)
+              .join("image")
+              .attr("xlink:href", d => url(...d3.tileWrap(d)))
+              .attr("x", ([x]) => (x + tiles.translate[0]) * tiles.scale)
+              .attr("y", ([, y]) => (y + tiles.translate[1]) * tiles.scale)
+              .attr("width", tiles.scale)
+              .attr("height", tiles.scale);
+          });
 
+          if (currentTarget > 0) { mouseEntered(currentTarget); }
 
-      //setting up interactivity and annotations
-      let delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
-      interactiveArea.on("mousemove", function (event) {
-
-        let loc = d3.pointer(event);
-
-        loc_x = (loc[0] - currTransform.x) / currTransform.k;
-        loc_y = (loc[1] - currTransform.y) / currTransform.k;
-
-        // console.log(currTransform)
-        // console.log(loc[0], loc[1]);
-        // console.log(loc_x, loc_y);
-
-        let index;
-        if (currentTarget === -1) {
-          // Does a sweep of triangles, which should be O(sqrt(N)) in most cases
-          index = delaunay.find(loc_x, loc_y);   // returns index of closest point
         }
-        else {
-          // With a known point index that's nearby, you can speed up the lookups dramatically
-          index = delaunay.find(loc_x, loc_y, currentTarget)
-        }
-        // console.log(loc, index);
-
-        if (index !== currentTarget) {
-          // Make our "mouseover" function
-          console.log("mouseover");
-          currentTarget = index;
-          mouseExited();
-          mouseEntered(index, loc[0], loc[1]);
-        }
-      });
-      // Also trigger "mouseout" when leaving interactive area
-      interactiveArea.on("mouseout", () => {
-        currentTarget = -1;
-        mouseExited();
-      })
 
 
-      let setName = "";
-      function mouseEntered(i) {
-        let d = powerPlants[i];
+        //setting up interactivity and annotations
+        let delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1]);
+        interactiveArea.on("mousemove", function (event) {
 
-        interactiveArea.append("circle")
-          .attr("id", "highlight")
-          .attr("cx", d.Position[0] * currTransform.k + currTransform.x)
-          .attr("cy", d.Position[1] * currTransform.k + currTransform.y)
-          .attr("r", 5)
-          .attr("stroke", "black")
-          .attr("fill", "none")
-          // .attr("transform", `translate(${currTransform.x}, ${currTransform.y})`)
-          // .attr("transform", `scale(${currTransform.k}, ${currTransform.k})`)
-          ;
+          let loc = d3.pointer(event);
 
-        setName = `Name: ${d['name']}`;
-        labelName.text(setName);
-        labelFuel.text(`Fuel Type: ${d['primary_fuel']}`);
-        labelCapacity.text(`Capacity: ${d3.format(".0f")(d["capacity_mw"])} mW`);
-        labelCountry.text(`Location: ${d["country_long"]}`);
+          loc_x = (loc[0] - currTransform.x) / currTransform.k;
+          loc_y = (loc[1] - currTransform.y) / currTransform.k;
 
-        labelBase.attr("opacity", 0.5).attr("width", textWidth()).attr("height", 90);
-      }
+          // console.log(currTransform)
+          // console.log(loc[0], loc[1]);
+          // console.log(loc_x, loc_y);
 
-      context.font = "16px Lato Helvetica";
-      function textWidth() {
-        let width = context.measureText(setName).width + 50
-        return width > 260 ? width : 260;
-      }
-
-      function mouseExited() {
-        d3.select("#highlight").remove();
-        labelBase.attr("opacity", 0);
-        labelName.text("");
-        labelFuel.text("");
-        labelCapacity.text("");
-        labelCountry.text("");
-
-      }
-
-
-      //making dynamic filter, based on INFO 3300 notes
-
-      //filter:
-
-      var filters = {};
-
-      function pointPassesFilters(point) {
-
-        let stillPassed = true;
-
-        Object.values(filters).forEach(filterFunc => {
-
-          stillPassed = filterFunc(point) && stillPassed;
-
-        });
-
-        return stillPassed;
-
-      }
-
-      //update function after filter applied
-      function updateData() {
-
-        // Filter the points using the filter dictionary first
-        powerPlants = powerPlantsAll.filter(d => pointPassesFilters(d));
-        console.log(powerPlants);
-
-        delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1])
-
-        //updates drawings
-        zoomed(currTransform);
-      }
-
-      function makeSlider(container, label, attribute, sliderWidth, sliderHeight, maxLimit) {
-
-        // Get a raw array of values for this property
-        let values = powerPlantsAll.map(d => d[attribute]).sort(function (a, b) { return b - a }); //sorted for optimization
-
-        // Find min and max for some scales
-        let minMax = [0, maxLimit];
-
-        let xScale = d3.scaleLinear().domain(minMax)
-          .range([10, sliderWidth - 20]); // padding here for ease
-
-        let xAxis = d3.axisBottom(xScale)
-          .tickFormat(function (d) {
-            // console.log("interval", d);
-            return (d == maxLimit) ? `> ${maxLimit}` : d;
-          })
-          ;
-
-        // Create some HTML elements
-        let wrapper = container.append("div").attr("class", "controls").style("margin-top", "10px");
-        wrapper.append("div").text(label);
-
-        let rowwrapper = wrapper.append("div")
-          .style("display", "flex")
-          .style("align-items", "center");
-
-        let canvas = rowwrapper.append("svg").attr("id", "capacity selection")
-          .attr("width", sliderWidth)
-          .attr("height", sliderHeight + 30)
-          .attr("attribute", attribute);
-        canvas.append("g").attr("transform", `translate(0,${sliderHeight})`)
-          .call(xAxis);
-
-        let buttons = rowwrapper.append("div")
-          .style("display", "flex")
-          .style("flex-direction", "row")
-          .style("justify-content", "center");
-
-        buttons
-          .append("button")
-          .text("> 500mW")
-          .style("margin-right", 8)
-          .on("click", function () {
-            brushRegion.call(brush.move, null)
-
-            let filterFunc = d => d[attribute] > 500;
-            filters[attribute] = filterFunc;
-
-            updateData();
-          })
-
-        buttons
-          .append("button")
-          .text("> 1500mW")
-          .style("margin-right", 8)
-          .on("click", function () {
-            brushRegion.call(brush.move, null)
-
-            let filterFunc = d => d[attribute] > 1500;
-            filters[attribute] = filterFunc;
-
-            updateData();
-          })
-
-        buttons
-          .append("button")
-          .style("margin-right", 8)
-          .text("top 20 plants by capacity")
-          .on("click", function () {
-            brushRegion.call(brush.move, null);
-
-            console.log(values);
-            let cap = values[19];
-            console.log(cap);
-
-            let filterFunc = d => d[attribute] >= cap;
-            filters[attribute] = filterFunc;
-
-            updateData();
-          })
-
-        // Make an area chart
-        let areaLayer = canvas.append("g");
-
-        // generate histogram
-        let numBins = 20;
-        let histoGen = d3.histogram().domain(minMax)
-          .thresholds(numBins);
-        let counts = histoGen(values);
-
-        // dummy object at start of graph
-        counts.unshift({
-          x0: 0,
-          x1: counts[0].x0,
-          length: counts[0].length
-        });
-
-        let yScale = d3.scaleLinear().domain(d3.extent(counts, d => d.length))
-          .range([sliderHeight, 10]);
-
-        // Area generator is like a lineGen, but we give y0 and y1 to fill it in
-        let area = d3.area().x(d => xScale(d.x1))
-          .y0(yScale(0))
-          .y1(d => yScale(d.length))
-          .curve(d3.curveNatural);
-
-        // Adding the path works just like a line (the area generator just makes a filled region)
-        areaLayer.append("path").datum(counts)
-          .attr("class", "area")
-          .attr("fill", "#9dbbed")
-          .attr("d", area);
-
-
-        let filterFunc = d => true;
-        filters[attribute] = filterFunc;
-
-        var brush = d3.brushX().extent([[10, 0], // Upper left corner
-        [sliderWidth - 10, sliderHeight]])  // Lower right corner
-          .on("brush end", brushMoved);
-
-        function brushMoved(event) {
-          console.log(event);
-
-          // Everything but clicking on brush area
-          if (event.selection !== null) {
-
-            // Run scales in reverse to get data values for the ends of the brush
-            //  If a scale turns data -> pixels, then scale.invert turns pixels -> data
-            let start = xScale.invert(event.selection[0]);
-            let end = xScale.invert(event.selection[1]);
-
-            if (end > maxLimit - 10) { end = Infinity; } //query all the power stations that are big.
-
-            // Overwrite old filter in our dictionary
-            // This filter now only returns True if the point's value is between start and end
-            let filterFunc = d => d[attribute] >= start && d[attribute] <= end;
-            filters[attribute] = filterFunc;
-
-            updateData();
-
+          let index;
+          if (currentTarget === -1) {
+            // Does a sweep of triangles, which should be O(sqrt(N)) in most cases
+            index = delaunay.find(loc_x, loc_y);   // returns index of closest point
           }
-
-          // Clicking on brush area to empty it out
           else {
-            // Selected nothing, let everything pass
-            let filterFunc = d => true;
-            filters[attribute] = filterFunc;
-
-            updateData();
-
+            // With a known point index that's nearby, you can speed up the lookups dramatically
+            index = delaunay.find(loc_x, loc_y, currentTarget)
           }
+          // console.log(loc, index);
+
+          if (index !== currentTarget) {
+            // Make our "mouseover" function
+            console.log("mouseover");
+            currentTarget = index;
+            mouseExited();
+            mouseEntered(index, loc[0], loc[1]);
+          }
+        });
+        // Also trigger "mouseout" when leaving interactive area
+        interactiveArea.on("mouseout", () => {
+          currentTarget = -1;
+          mouseExited();
+        })
+
+
+        let setName = "";
+        function mouseEntered(i) {
+          let d = powerPlants[i];
+
+          interactiveArea.append("circle")
+            .attr("id", "highlight")
+            .attr("cx", d.Position[0] * currTransform.k + currTransform.x)
+            .attr("cy", d.Position[1] * currTransform.k + currTransform.y)
+            .attr("r", 5)
+            .attr("stroke", "black")
+            .attr("fill", "none")
+            // .attr("transform", `translate(${currTransform.x}, ${currTransform.y})`)
+            // .attr("transform", `scale(${currTransform.k}, ${currTransform.k})`)
+            ;
+
+          setName = `Name: ${d['name']}`;
+          labelName.text(setName);
+          labelFuel.text(`Fuel Type: ${d['primary_fuel']}`);
+          labelCapacity.text(`Capacity: ${d3.format(".0f")(d["capacity_mw"])} mW`);
+          labelCountry.text(`Location: ${d["country_long"]}`);
+
+          labelBase.attr("opacity", 0.5).attr("width", textWidth()).attr("height", 90);
+        }
+
+        context.font = "16px Lato Helvetica";
+        function textWidth() {
+          let width = context.measureText(setName).width + 50
+          return width > 260 ? width : 260;
+        }
+
+        function mouseExited() {
+          d3.select("#highlight").remove();
+          labelBase.attr("opacity", 0);
+          labelName.text("");
+          labelFuel.text("");
+          labelCapacity.text("");
+          labelCountry.text("");
 
         }
 
-        let brushRegion = canvas.append("g").attr("class", "brush")
-        brushRegion.call(brush);
+
+        //making dynamic filter, based on INFO 3300 notes
+
+        //filter:
+
+        var filters = {};
+
+        function pointPassesFilters(point) {
+
+          let stillPassed = true;
+
+          Object.values(filters).forEach(filterFunc => {
+
+            stillPassed = filterFunc(point) && stillPassed;
+
+          });
+
+          return stillPassed;
+
+        }
+
+        //update function after filter applied
+        function updateData() {
+
+          // Filter the points using the filter dictionary first
+          powerPlants = powerPlantsAll.filter(d => pointPassesFilters(d));
+          console.log(powerPlants);
+
+          delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1])
+
+          //updates drawings
+          zoomed(currTransform);
+        }
+
+        function makeSlider(container, label, attribute, sliderWidth, sliderHeight, maxLimit) {
+
+          // Get a raw array of values for this property
+          let values = powerPlantsAll.map(d => d[attribute]).sort(function (a, b) { return b - a }); //sorted for optimization
+
+          // Find min and max for some scales
+          let minMax = [0, maxLimit];
+
+          let xScale = d3.scaleLinear().domain(minMax)
+            .range([10, sliderWidth - 20]); // padding here for ease
+
+          let xAxis = d3.axisBottom(xScale)
+            .tickFormat(function (d) {
+              // console.log("interval", d);
+              return (d == maxLimit) ? `> ${maxLimit}` : d;
+            })
+            ;
+
+          // Create some HTML elements
+          let wrapper = container.append("div").attr("class", "controls").style("margin-top", "10px");
+          wrapper.append("div").text(label);
+
+          let rowwrapper = wrapper.append("div")
+            .style("display", "flex")
+            .style("align-items", "center");
+
+          let canvas = rowwrapper.append("svg").attr("id", "capacity selection")
+            .attr("width", sliderWidth)
+            .attr("height", sliderHeight + 30)
+            .attr("attribute", attribute);
+          canvas.append("g").attr("transform", `translate(0,${sliderHeight})`)
+            .call(xAxis);
+
+          let buttons = rowwrapper.append("div")
+            .style("display", "flex")
+            .style("flex-direction", "row")
+            .style("justify-content", "center");
+
+          buttons
+            .append("button")
+            .text("> 500mW")
+            .style("margin-right", 8)
+            .on("click", function () {
+              brushRegion.call(brush.move, null)
+
+              let filterFunc = d => d[attribute] > 500;
+              filters[attribute] = filterFunc;
+
+              updateData();
+            })
+
+          buttons
+            .append("button")
+            .text("> 1500mW")
+            .style("margin-right", 8)
+            .on("click", function () {
+              brushRegion.call(brush.move, null)
+
+              let filterFunc = d => d[attribute] > 1500;
+              filters[attribute] = filterFunc;
+
+              updateData();
+            })
+
+          buttons
+            .append("button")
+            .style("margin-right", 8)
+            .text("top 20 plants by capacity")
+            .on("click", function () {
+              brushRegion.call(brush.move, null);
+
+              console.log(values);
+              let cap = values[19];
+              console.log(cap);
+
+              let filterFunc = d => d[attribute] >= cap;
+              filters[attribute] = filterFunc;
+
+              updateData();
+            })
+
+          // Make an area chart
+          let areaLayer = canvas.append("g");
+
+          // generate histogram
+          let numBins = 20;
+          let histoGen = d3.histogram().domain(minMax)
+            .thresholds(numBins);
+          let counts = histoGen(values);
+
+          // dummy object at start of graph
+          counts.unshift({
+            x0: 0,
+            x1: counts[0].x0,
+            length: counts[0].length
+          });
+
+          let yScale = d3.scaleLinear().domain(d3.extent(counts, d => d.length))
+            .range([sliderHeight, 10]);
+
+          // Area generator is like a lineGen, but we give y0 and y1 to fill it in
+          let area = d3.area().x(d => xScale(d.x1))
+            .y0(yScale(0))
+            .y1(d => yScale(d.length))
+            .curve(d3.curveNatural);
+
+          // Adding the path works just like a line (the area generator just makes a filled region)
+          areaLayer.append("path").datum(counts)
+            .attr("class", "area")
+            .attr("fill", "#9dbbed")
+            .attr("d", area);
+
+
+          let filterFunc = d => true;
+          filters[attribute] = filterFunc;
+
+          var brush = d3.brushX().extent([[10, 0], // Upper left corner
+          [sliderWidth - 10, sliderHeight]])  // Lower right corner
+            .on("brush end", brushMoved);
+
+          function brushMoved(event) {
+            console.log(event);
+
+            // Everything but clicking on brush area
+            if (event.selection !== null) {
+
+              // Run scales in reverse to get data values for the ends of the brush
+              //  If a scale turns data -> pixels, then scale.invert turns pixels -> data
+              let start = xScale.invert(event.selection[0]);
+              let end = xScale.invert(event.selection[1]);
+
+              if (end > maxLimit - 10) { end = Infinity; } //query all the power stations that are big.
+
+              // Overwrite old filter in our dictionary
+              // This filter now only returns True if the point's value is between start and end
+              let filterFunc = d => d[attribute] >= start && d[attribute] <= end;
+              filters[attribute] = filterFunc;
+
+              updateData();
+
+            }
+
+            // Clicking on brush area to empty it out
+            else {
+              // Selected nothing, let everything pass
+              let filterFunc = d => true;
+              filters[attribute] = filterFunc;
+
+              updateData();
+
+            }
+
+          }
+
+          let brushRegion = canvas.append("g").attr("class", "brush")
+          brushRegion.call(brush);
+        }
+
+        let controls = d3.select("#controlfilter");
+        makeSlider(controls, "Capacity (mW)", "capacity_mw", 670, 50, 160);
+
+        let energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+
+        // populate legend
+        const legendGlobalMap = d3.select("#legendGlobalMap").append("g")
+
+        d3.select("#legendGlobalMap").append("g").attr("id", "test").append("text").attr("x", 5).attr("y", 13).text("Primary Fuel Type");
+
+        legendGlobalMap.selectAll("rect")
+          .data(primaryFuelTypes)
+          .join("rect")
+          .attr("x", 5)
+          .attr("y", (d, i) => 25 + i * 20)
+          .attr("width", 10)
+          .attr("height", 10)
+          .attr("fill", d => colorScale(d))
+          .attr("stroke", "#bbb")
+          .attr("stroke-width", 1)
+          .attr("clicked", "true")
+          .style("border-radius", "1px")
+          .on("mouseover", function () {
+            d3.select(this).attr("opacity", 0.5);
+          })
+          .on("mouseout", function () {
+            d3.select(this).attr("opacity", 1);
+          })
+          .on("click", function (d, i) {
+
+            var clicked = d3.select(this).attr("clicked");
+
+            if (clicked === "true") {
+
+              d3.select(this)
+                .attr("fill", "white")
+                .attr("clicked", "false");
+
+              energyTypes = energyTypes.filter(name => name !== d3.select(this).datum())
+
+              let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+              filters["primary_fuel"] = filterFunc;
+
+              updateData();
+            } else {
+
+              d3.select(this)
+                .attr("fill", d => colorScale(d))
+                .attr("clicked", "true");
+
+              energyTypes.push(d3.select(this).datum());
+
+              let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+              filters["primary_fuel"] = filterFunc;
+
+              updateData();
+            }
+          });
+
+        legendGlobalMap.selectAll("text")
+          .data(primaryFuelTypes)
+          .join("text")
+          .attr("y", (d, i) => i * 20 + 35)
+          .attr("x", 20)
+          .text(d => d)
+          .attr("fill", "black")
+          .style("user-select", "none");
+
+
+        let primaryFuelButtons = d3.select("#filterButtons")
+        //.append("g").style("margin-left", 5);
+
+        primaryFuelButtons.append("button")
+          .text("Renewable Energy Plants")
+          .on("click", function () {
+
+            energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass']
+            // energyTypes =['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
+
+            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+            filters["primary_fuel"] = filterFunc;
+
+            updateData();
+
+            //updates selections for checkboxes
+            legendGlobalMap.selectAll("rect")
+              .attr("fill", function (d) {
+                if (energyTypes.includes(d)) { return colorScale(d) }
+                else { return "white" }
+              })
+              .attr("clicked", function (d) {
+                if (energyTypes.includes(d)) { return "true" }
+                else { return "false" }
+              })
+          });
+
+        primaryFuelButtons.append("button")
+          .text("Non-Renewable Energy Plants")
+          .style("margin-top", "5")
+          .on("click", function () {
+
+            energyTypes = ['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
+
+            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+            filters["primary_fuel"] = filterFunc;
+
+            updateData();
+
+            //updates selections for checkboxes
+            legendGlobalMap.selectAll("rect")
+              .attr("fill", function (d) {
+                if (energyTypes.includes(d)) { return colorScale(d) }
+                else { return "white" }
+              })
+              .attr("clicked", function (d) {
+                if (energyTypes.includes(d)) { return "true" }
+                else { return "false" }
+              })
+          });
+
+        primaryFuelButtons.append("button")
+          .text("Clear Filters on Fuel Type")
+          .style("margin-top", "5")
+          .on("click", function () {
+
+            energyTypes = primaryFuelTypes;
+
+            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
+            filters["primary_fuel"] = filterFunc;
+
+            updateData();
+
+            //updates selections for checkboxes
+            legendGlobalMap.selectAll("rect")
+              .attr("fill", function (d) {
+                if (energyTypes.includes(d)) { return colorScale(d) }
+                else { return "white" }
+              })
+              .attr("clicked", function (d) {
+                if (energyTypes.includes(d)) { return "true" }
+                else { return "false" }
+              })
+          });
+
       }
 
-      let controls = d3.select("#controlfilter");
-      makeSlider(controls, "Capacity (mW)", "capacity_mw", 670, 50, 160);
 
-      let energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass', 'Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other'];
+      requestZoomableMapData();
 
-      // populate legend
-      const legendGlobalMap = d3.select("#legendGlobalMap").append("g")
+    </script>
+    <script>
 
-      d3.select("#legendGlobalMap").append("g").attr("id", "test").append("text").attr("x", 5).attr("y", 13).text("Primary Fuel Type");
+      const svgHistograms = d3.select("#histograms");
 
-      legendGlobalMap.selectAll("rect")
-        .data(primaryFuelTypes)
-        .join("rect")
-        .attr("x", 5)
-        .attr("y", (d, i) => 25 + i * 20)
-        .attr("width", 10)
-        .attr("height", 10)
-        .attr("fill", d => colorScale(d))
-        .attr("stroke", "#bbb")
-        .attr("stroke-width", 1)
-        .attr("clicked", "true")
-        .style("border-radius", "1px")
-        .on("mouseover", function () {
-          d3.select(this).attr("opacity", 0.5);
-        })
-        .on("mouseout", function () {
-          d3.select(this).attr("opacity", 1);
-        })
-        .on("click", function (d, i) {
+      d3.select("#mapSelectionButtons").append("button")
+        .attr("id", "continentButton")
+        .text("Power Capacity by Continent")
+        .on("click",
+          d => {
+            continentButton.classList.toggle('clicked');
 
-          var clicked = d3.select(this).attr("clicked");
+            if (continentButton.classList.contains("clicked")) {
+              svgHistograms.selectAll("*").remove();
+              if (topCountryButton.classList.contains("clicked")) { topCountryButton.classList.toggle('clicked'); }
+              if (topPlantButton.classList.contains("clicked")) { topPlantButton.classList.toggle('clicked'); }
+              requestDataPF();
+            }
+            else {
+              svgHistograms.selectAll("*").remove();
+            }
+          }
+        );
 
-          if (clicked === "true") {
+      d3.select("#mapSelectionButtons").append("button")
+        .attr("id", "topCountryButton")
+        .style("margin-left", "5px")
+        .text("Top 10 Countries by Total Power Capacity")
+        .on("click",
+          d => {
 
-            d3.select(this)
-              .attr("fill", "white")
-              .attr("clicked", "false");
+            topCountryButton.classList.toggle('clicked');
+            if (topCountryButton.classList.contains("clicked")) {
+              svgHistograms.selectAll("*").remove();
+              if (continentButton.classList.contains("clicked")) { continentButton.classList.toggle('clicked'); }
+              if (topPlantButton.classList.contains("clicked")) { topPlantButton.classList.toggle('clicked'); }
+              requestData();
+            }
+            else {
+              svgHistograms.selectAll("*").remove();
+            }
+          }
+        );
 
-            energyTypes = energyTypes.filter(name => name !== d3.select(this).datum())
+      d3.select("#mapSelectionButtons").append("button")
+        .attr("id", "topPlantButton")
+        .style("margin-left", "5px")
+        .text("Top 10 Plants by Power Capacity")
+        .on("click",
+          d => {
 
-            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
-            filters["primary_fuel"] = filterFunc;
+            topPlantButton.classList.toggle('clicked');
+            if (topPlantButton.classList.contains("clicked")) {
+              svgHistograms.selectAll("*").remove();
+              if (topCountryButton.classList.contains("clicked")) { topCountryButton.classList.toggle('clicked'); }
+              if (continentButton.classList.contains("clicked")) { continentButton.classList.toggle('clicked'); }
+              requestDataTopPlants();
+            }
+            else {
+              svgHistograms.selectAll("*").remove();
+            }
+          }
+        );
 
-            updateData();
-          } else {
 
-            d3.select(this)
-              .attr("fill", d => colorScale(d))
-              .attr("clicked", "true");
 
-            energyTypes.push(d3.select(this).datum());
+      const requestDataPF = async function () {
+        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+        var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
 
-            let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
-            filters["primary_fuel"] = filterFunc;
+        const countryToContinent = {};
+        countries_continents.forEach(entry => {
+          const country = entry.Entity.trim();
+          const continent = entry.Continent.trim();
+          countryToContinent[country] = continent;
+        });
 
-            updateData();
+        const groupedData = {};
+        data_pm.forEach(d => {
+          const continent = countryToContinent[d.country_long];
+          if (!continent) return; // handle invalid
+
+          if (!groupedData[continent]) {
+            groupedData[continent] = {};
+          }
+
+          if (!groupedData[continent][d.primary_fuel]) {
+            groupedData[continent][d.primary_fuel] = 0;
+          }
+
+          groupedData[continent][d.primary_fuel]++;
+        });
+
+        const primaryFuels = [...new Set(data_pm.map(entry => entry.primary_fuel))];
+
+        const totalPerContinent = {};
+        for (const continent in groupedData) {
+          const key = `${continent}`;
+          totalPerContinent[continent] = d3.sum(Object.values(groupedData[continent]));
+        }
+
+
+        const svg = d3.select("#histograms");
+        const margin = { top: 0, right: 150, bottom: 70, left: 60 };
+        const width = svg.attr("width") - margin.left - margin.right;
+        const height = svg.attr("height") - margin.top - margin.bottom;
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+
+        const continents = ["Africa", "Antarctica", "Asia", "Europe", "North America", "Oceania", "South America"];
+
+        const stackedData = [];
+        Object.keys(groupedData).forEach(continent => {
+
+          const fuels = Object.keys(groupedData[continent]);
+
+          const entry = {
+            continent: continent
+          };
+
+          fuels.forEach(fuel => {
+            entry[fuel] = groupedData[continent][fuel];
+          });
+
+          stackedData.push(entry);
+
+        });
+
+
+        // console.log(stackedData)
+        const continent = stackedData.map(d => d.continent);
+
+        // Create index 
+        const index = d3.index(stackedData, d => d.continent);
+
+        // Access counts
+        const value = (d, fuel) => d.get(fuel);
+
+        const stack = d3.stack()
+          .keys(primaryFuels)
+          .value((d, key) => {
+            const row = index.get(d); // Get data object 
+            return row[key]; // Return value 
+          })
+          .order(d3.stackOrderAscending);
+
+
+
+        var series = stack(continent);
+
+        const stackedSeries = primaryFuels.map(fuel => {
+          return {
+            key: fuel,
+            values: continents.map(c => groupedData[c][fuel] || 0)
           }
         });
 
-      legendGlobalMap.selectAll("text")
-        .data(primaryFuelTypes)
-        .join("text")
-        .attr("y", (d, i) => i * 20 + 35)
-        .attr("x", 20)
-        .text(d => d)
-        .attr("fill", "black")
-        .style("user-select", "none");
+
+        const x = d3.scaleBand()
+          .domain(stackedData.map(d => d.continent))
+          .range([0, width])
+          .padding([0.1]);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(series, c => d3.max(c, (d => d[1]) || 0)) + 620])
+          .rangeRound([height, 0]);
+
+        const total = d3.extent(Object.values(totalPerContinent))
+
+        svg.append("g")
+          .selectAll(".continent")
+          .data(series)
+          .join("g")
+          .attr("fill", d => colorScale(d.key))
+          .selectAll("rect")
+          .data(d => d)
+          .join("rect")
+          .attr("x", (d, i) => x(continent[i]))
+          .attr("y", d => y(d[1]))
+          .attr("height", d => (y(d[0]) - y(d[1])) || 0)
+          .attr("width", x.bandwidth())
+          .attr("transform", `translate(${margin.left},0)`);
 
 
-      let primaryFuelButtons = d3.select("#filterButtons")
-      //.append("g").style("margin-left", 5);
+        svg.append("g")
+          .selectAll()
+          .data(series)
+          .join("g")
+          .selectAll("text")
+          .data(d => d.map(v => ({ ...v, key: d.key, value: v[1] - v[0] })))
+          .join("text")
+          .text(d => d.value)
+          .attr("visibility", d => d.value >= 600 ? "visible" : "hidden")
+          .attr("x", (d, i) => x(continent[i]) + x.bandwidth())
+          .attr("y", d => ((y(d[1]) + y(d[0])) / 2 || 0))
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr('style', 'font-size:10pt;')
+          .attr('fill', 'white');
 
-      primaryFuelButtons.append("button")
-        .text("Renewable Energy Plants")
-        .on("click", function () {
+        // Add labels on top of the bars
+        svg.selectAll(".labels")
+          .data(series)
+          .enter()
+          .append("text")
+          // .attr("x", (d, i) => (x(continent[i]))||0)
+          .attr("x", (d, i) => (x(continent[i]) || 0) + x.bandwidth())
+          // .attr("y", d => (y(d[0])) || 0)  
+          .attr("y", (d, i) => {
+            cont = ((continent[i]))
+            return y(totalPerContinent[cont] || 0)
+          })
+          .text((d, i) => {
+            cont = ((continent[i]))
+            return (d3.format(',')(totalPerContinent[cont] || 0));
+          })
+          .attr("visibility", (d, i) => (totalPerContinent[(continent[i])] > 0) ? "visible" : "hidden")
+          .attr("text-anchor", "middle")
+          .attr("dominant-baseline", "central")
+          .attr('style', 'font-size:10pt;')
+          .attr('style', 'color: black;')
+          .attr('fill', 'black')
+          .attr("transform", `translate(5, ${-10})`);
 
-          energyTypes = ['Solar', 'Wind', 'Hydro', 'Wave and Tidal', 'Geothermal', 'Biomass']
-          // energyTypes =['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
 
-          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
-          filters["primary_fuel"] = filterFunc;
 
-          updateData();
 
-          //updates selections for checkboxes
-          legendGlobalMap.selectAll("rect")
-            .attr("fill", function (d) {
-              if (energyTypes.includes(d)) { return colorScale(d) }
-              else { return "white" }
-            })
-            .attr("clicked", function (d) {
-              if (energyTypes.includes(d)) { return "true" }
-              else { return "false" }
-            })
+
+        // axes
+        svg.append("g")
+          .attr("transform", `translate(${margin.left}, ${height})`)
+          .call(d3.axisBottom(x));
+
+        // svg.append("g")
+        //   .attr("transform", `translate(${margin.left},0)`)
+        //   .call(d3.axisLeft(y))
+
+        g.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("# of plants")
+
+
+
+        const legend = svg.append("g")
+          .attr("transform", `translate(${width + 75},20)`)
+
+
+        legend.selectAll("rect")
+          .data(primaryFuelTypes)
+          .join("rect")
+          .attr("y", (d, i) => i * 20)
+          .attr("width", 10)
+          .attr("height", 10)
+          .attr("fill", d => colorScale(d));
+
+        legend.selectAll("text")
+          .data(primaryFuelTypes)
+          .join("text")
+          .attr("y", (d, i) => i * 20 + 9)
+          .attr("x", 12)
+          .text(d => d)
+          .attr("fill", "black");
+
+
+      }
+
+    </script>
+
+    <script>
+      const requestData = async function () {
+        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+
+        // Group power plant capacities by country and type of fuel
+        const groupedData = {};
+        data_pm.forEach(d => {
+          if (!groupedData[d.country_long]) {
+            groupedData[d.country_long] = {};
+          }
+
+          if (!groupedData[d.country_long][d.primary_fuel]) {
+            groupedData[d.country_long][d.primary_fuel] = 0;
+          }
+
+          groupedData[d.country_long][d.primary_fuel] += d.capacity_mw;
         });
 
-      primaryFuelButtons.append("button")
-        .text("Non-Renewable Energy Plants")
-        .style("margin-top", "5")
-        .on("click", function () {
+        // Sort countries by total capacity and select top 10
+        var sortedCountries = Object.keys(groupedData).sort((a, b) => {
+          const totalCapacityA = Object.values(groupedData[a]).reduce((acc, val) => acc + val, 0);
+          const totalCapacityB = Object.values(groupedData[b]).reduce((acc, val) => acc + val, 0);
+          return totalCapacityB - totalCapacityA;
+        }).slice(0, 10);
 
-          energyTypes = ['Gas', 'Oil', 'Nuclear', 'Coal', 'Waste', 'Petcoke', 'Storage', 'Cogeneration', 'Other']
+        // Extract fuel types
+        const fuelTypes = Array.from(new Set(data_pm.map(entry => entry.primary_fuel)));
 
-          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
-          filters["primary_fuel"] = filterFunc;
-
-          updateData();
-
-          //updates selections for checkboxes
-          legendGlobalMap.selectAll("rect")
-            .attr("fill", function (d) {
-              if (energyTypes.includes(d)) { return colorScale(d) }
-              else { return "white" }
-            })
-            .attr("clicked", function (d) {
-              if (energyTypes.includes(d)) { return "true" }
-              else { return "false" }
-            })
+        // Prepare data for stacked bar chart
+        const stackedData = sortedCountries.map(country => {
+          const entry = { country };
+          fuelTypes.forEach(fuel => {
+            entry[fuel] = groupedData[country][fuel] || 0;
+          });
+          return entry;
         });
 
-      primaryFuelButtons.append("button")
-        .text("Clear Filters on Fuel Type")
-        .style("margin-top", "5")
-        .on("click", function () {
+        // console.log(stackedData)
 
-          energyTypes = primaryFuelTypes;
+        // Setup SVG dimensions and margins
+        const svg = d3.select("#histograms");
+        const margin = { top: 20, right: 150, bottom: 70, left: 60 };
+        const width = +svg.attr("width") - margin.left - margin.right;
+        const height = +svg.attr("height") - margin.top - margin.bottom;
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-          let filterFunc = d => energyTypes.includes(d["primary_fuel"]);
-          filters["primary_fuel"] = filterFunc;
+        // Setup scales
+        const x = d3.scaleBand()
+          .domain(sortedCountries)
+          .range([0, width])
+          .padding(0.1);
 
-          updateData();
-
-          //updates selections for checkboxes
-          legendGlobalMap.selectAll("rect")
-            .attr("fill", function (d) {
-              if (energyTypes.includes(d)) { return colorScale(d) }
-              else { return "white" }
-            })
-            .attr("clicked", function (d) {
-              if (energyTypes.includes(d)) { return "true" }
-              else { return "false" }
-            })
-        });
-
-    }
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(stackedData, d => d3.sum(fuelTypes.map(fuel => d[fuel])))])
+          .nice()
+          .rangeRound([height, 0]);
 
 
-    requestZoomableMapData();
+        // Setup stack generator
+        const stack = d3.stack()
+          .keys(fuelTypes)
+          .order(d3.stackOrderNone)
+          .offset(d3.stackOffsetNone);
 
-  </script>
+        // Generate stacked data
+        const series = stack(stackedData);
+
+        // Append bars
+        g.selectAll(".serie")
+          .data(series)
+          .join("g")
+          .attr("class", "serie")
+          .attr("fill", d => colorScale(d.key))
+          .selectAll("rect")
+          .data(d => d)
+          .join("rect")
+          .attr("x", d => x(d.data.country))
+          .attr("y", d => y(d[1]))
+          .attr("height", d => y(d[0]) - y(d[1]))
+          .attr("width", x.bandwidth());
+
+        // Append axes
+        g.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x));
+
+        g.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("Capacity (MW)");
+
+
+        const legend = svg.append("g")
+          .attr("transform", `translate(${width + 75},20)`)
+
+
+        legend.selectAll("rect")
+          .data(primaryFuelTypes)
+          .join("rect")
+          .attr("y", (d, i) => i * 20)
+          .attr("width", 10)
+          .attr("height", 10)
+          .attr("fill", d => colorScale(d));
+
+        legend.selectAll("text")
+          .data(primaryFuelTypes)
+          .join("text")
+          .attr("y", (d, i) => i * 20 + 9)
+          .attr("x", 12)
+          .text(d => d)
+          .attr("fill", "black");
+
+      }
+
+      const requestDataTopPlants = async function () {
+        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+
+        // Sort power plants by capacity_mw and select top 10
+        const sortedPlants = data_pm.sort((a, b) => b.capacity_mw - a.capacity_mw).slice(0, 10);
+
+        // Extract fuel types
+        const fuelTypes = Array.from(new Set(data_pm.map(entry => entry.primary_fuel)));
+
+        // Setup SVG dimensions and margins
+        const svg = d3.select("#histograms");
+        const margin = { top: 20, right: 150, bottom: 70, left: 60 };
+        const width = +svg.attr("width") - margin.left - margin.right;
+        const height = +svg.attr("height") - margin.top - margin.bottom;
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Setup scales
+        const x = d3.scaleBand()
+          .domain(sortedPlants.map(d => d.name))
+          .range([0, width])
+          .padding(0.1);
+
+        const y = d3.scaleLinear()
+          .domain([0, d3.max(sortedPlants, d => d.capacity_mw)])
+          .nice()
+          .rangeRound([height, 0]);
+
+        // Append bars
+        g.selectAll(".bar")
+          .data(sortedPlants)
+          .join("rect")
+          .attr("class", "bar")
+          .attr("x", d => x(d.name))
+          .attr("y", d => y(d.capacity_mw))
+          .attr("width", x.bandwidth())
+          .attr("height", d => height - y(d.capacity_mw))
+          .attr("fill", d => colorScale(d.primary_fuel));
+
+        // Append axes
+        g.append("g")
+          .attr("class", "axis")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x))
+          .selectAll("text")
+          .attr("dy", "1.5")
+          .attr("x", -9)
+          .attr("y", 0)
+          .attr("text-anchor", "end")
+          .attr("transform", "rotate(-45)")
+          .call(wrap, x.bandwidth());
+
+        g.append("g")
+          .attr("class", "axis")
+          .call(d3.axisLeft(y).ticks(null, "s"))
+          .append("text")
+          .attr("x", 2)
+          .attr("y", y(y.ticks().pop()) + 0.5)
+          .attr("dy", "0.32em")
+          .attr("fill", "#000")
+          .attr("font-weight", "bold")
+          .attr("text-anchor", "start")
+          .text("Capacity (MW)");
+
+        // Append legend
+        const legend = svg.append("g")
+          .attr("transform", `translate(${width + 75},20)`)
+
+
+        legend.selectAll("rect")
+          .data(primaryFuelTypes)
+          .join("rect")
+          .attr("y", (d, i) => i * 20)
+          .attr("width", 10)
+          .attr("height", 10)
+          .attr("fill", d => colorScale(d));
+
+        legend.selectAll("text")
+          .data(primaryFuelTypes)
+          .join("text")
+          .attr("y", (d, i) => i * 20 + 9)
+          .attr("x", 12)
+          .text(d => d)
+          .attr("fill", "black");
+
+        function wrap(text, width) {
+          text.each(function () {
+            var text = d3.select(this),
+              words = text.text().split(/\s+/).reverse(),
+              word,
+              line = [],
+              lineNumber = 0,
+              lineHeight = 1.1, // ems
+              y = text.attr("y"),
+              dy = parseFloat(text.attr("dy")),
+              tspan = text.text(null).append("tspan").attr("x", 0).attr("y", y).attr("dy", dy + "em");
+            while (word = words.pop()) {
+              line.push(word);
+              tspan.text(line.join(" "));
+              if (tspan.node().getComputedTextLength() > width) {
+                line.pop();
+                tspan.text(line.join(" "));
+                line = [word];
+                tspan = text.append("tspan").attr("x", 0).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+              }
+            }
+          });
+
+        }
+      }
+
+      continentButton.classList.toggle('clicked');
+      requestDataPF();
+    </script>
 </body>
 
 </html>
