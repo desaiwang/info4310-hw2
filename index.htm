@@ -228,8 +228,8 @@
 
 
         //load power plant data
-        const powerPlantsAll = await d3.csv("./global_power_plant_database.csv", d3.autoType);
-        const countries = await d3.json("./countries.geojson");
+        const powerPlantsAll = await d3.csv("./data/global_power_plant_database.csv", d3.autoType);
+        const countries = await d3.json("./data/countries.geojson");
         // console.log(powerPlants);
 
         // Mercator projection
@@ -354,7 +354,7 @@
 
           if (index !== currentTarget) {
             // Make our "mouseover" function
-            console.log("mouseover");
+            // console.log("mouseover");
             currentTarget = index;
             mouseExited();
             mouseEntered(index, loc[0], loc[1]);
@@ -433,7 +433,7 @@
 
           // Filter the points using the filter dictionary first
           powerPlants = powerPlantsAll.filter(d => pointPassesFilters(d));
-          console.log(powerPlants);
+          // console.log(powerPlants);
 
           delaunay = d3.Delaunay.from(powerPlants, d => d.Position[0], d => d.Position[1])
 
@@ -512,9 +512,9 @@
             .on("click", function () {
               brushRegion.call(brush.move, null);
 
-              console.log(values);
+              // console.log(values);
               let cap = values[19];
-              console.log(cap);
+              // console.log(cap);
 
               let filterFunc = d => d[attribute] >= cap;
               filters[attribute] = filterFunc;
@@ -815,8 +815,8 @@
 
 
       const requestDataPF = async function () {
-        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
-        var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
+        var data_pm = await d3.csv("./data/global_power_plant_database.csv", d3.autoType);
+        var countries_continents = await d3.csv("./data/continents-according-to-our-world-in-data.csv", d3.autoType);
 
         const countryToContinent = {};
         countries_continents.forEach(entry => {
@@ -1026,7 +1026,7 @@
 
     <script>
       const requestData = async function () {
-        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+        var data_pm = await d3.csv("./data/global_power_plant_database.csv", d3.autoType);
 
         // Group power plant capacities by country and type of fuel
         const groupedData = {};
@@ -1147,7 +1147,7 @@
       }
 
       const requestDataTopPlants = async function () {
-        var data_pm = await d3.csv("./global_power_plant_database.csv", d3.autoType);
+        var data_pm = await d3.csv("./data/global_power_plant_database.csv", d3.autoType);
 
         // Sort power plants by capacity_mw and select top 10
         const sortedPlants = data_pm.sort((a, b) => b.capacity_mw - a.capacity_mw).slice(0, 10);
@@ -1261,8 +1261,8 @@
     </script>
     <script>
       const requestTopCapCountry = async function () {
-        var data_cc = await d3.csv("./global_power_plant_database.csv", d3.autoType);
-        var countries_continents = await d3.csv("./continents-according-to-our-world-in-data.csv", d3.autoType);
+        var data_cc = await d3.csv("./data/global_power_plant_database.csv", d3.autoType);
+        var countries_continents = await d3.csv("./data/continents-according-to-our-world-in-data.csv", d3.autoType);
         // console.log(countries_continents);
         // console.log(data_pm)
         const countryToContinent = {};
@@ -1357,7 +1357,7 @@
             const x = col * iconWidth;
             const y = row * iconHeight;
             display.append("image")
-              .attr("xlink:href", "home2.png")
+              .attr("xlink:href", "./data/home2.png")
               .attr("width", iconWidth)
               .attr("height", iconHeight)
               .attr("opacity", 0.5)
