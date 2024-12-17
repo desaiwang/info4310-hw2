@@ -265,16 +265,37 @@
           .join("g")
           .style("opacity", null); //set to 0.3 to see low resolution files
 
-        var zoom = d3.zoom()
+        let zoom = d3.zoom()
           .scaleExtent([1 << 10, 1 << 19])
+          //.translateExtent([[0, 0], [width, height]])
           .on("zoom", ({ transform }) => zoomed(transform));
 
+        // Now we can work on setting the zoom translate extent:
+        // Zooomed projected limits of screen in lat long:
+        let topLeft = projection([-180, 80]); //this is top left coord of this map
+        let bottomRight = projection([180, -60]); //this is bottom right coord of this map
+        console.log("topLeft", topLeft);
+        console.log("bottomRight", bottomRight);
 
+        // Set the zoom translate extent using the range of the projected screen coordinates
+        zoom.translateExtent([topLeft, bottomRight])
+
+        const initialScale = 1 << 10;
+        const initialCenter = [-98 - 35 / 60, 50 + 50 / 60]
         let initialTransform = d3.zoomIdentity
           .translate(width / 2, height / 2 + 100)
-          .scale(1 << 10);
+          .scale(-initialScale)
+          // .translate(...projection(initialCenter))
+          .scale(-1);
         let currTransform = initialTransform;
         let currentTarget = -1;
+
+        // console.log("currTransform([top, left])", currTransform);
+        // console.log("projection([-180, -85])", projection([-180, -85]))
+        // console.log("projection([-90, -45])", projection([-90, -45]))
+        // console.log("projection([0, 0])", projection([0, 0]))
+        // console.log("projection([90, 45])", projection([90, 45]))
+        // console.log("projection([180, 85])", projection([180, 85]))
 
         interactiveArea
           .call(zoom)
@@ -288,7 +309,7 @@
 
           currTransform = transform;
 
-          console.log(transform);
+          //console.log(transform);
           context.save();
           context.clearRect(0, 0, width, height);
           context.globalAlpha = 0.6;
